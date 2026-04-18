@@ -35,7 +35,7 @@ export default function HSNSelector({ companyName, onHSNSelect, selectedHSN }) {
       <motion.button
         whileHover={{ x: 4 }}
         whileTap={{ scale: 0.98 }}
-        onClick={() => onHSNSelect('all')}
+        onClick={() => onHSNSelect('all', 'Global Aggregate')}
         className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider
           border transition-all duration-200 group
           ${selectedHSN === 'all'
@@ -62,7 +62,7 @@ export default function HSNSelector({ companyName, onHSNSelect, selectedHSN }) {
             transition={{ delay: i * 0.03 }}
             whileHover={{ x: 4 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => onHSNSelect(h.code)}
+            onClick={() => onHSNSelect(h.code, h.description)}
             className={`w-full flex flex-col p-3 rounded-xl border transition-all duration-200 group relative overflow-hidden
               ${selectedHSN === h.code
                 ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-violet-500 shadow-premium'

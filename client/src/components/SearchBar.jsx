@@ -122,14 +122,13 @@ export default function SearchBar({ onCompanySelect }) {
 
       <AnimatePresence>
         {open && suggestions.length > 0 && (
-          <motion.div 
-            ref={dropRef}
-            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.98 }}
-            className="absolute top-full left-0 right-0 mt-2 py-2 z-[100]
-                       bg-white border border-slate-200 rounded-2xl shadow-elevated overflow-hidden shadow-premium"
-          >
+          <div ref={dropRef} key="search-suggestions-container" className="absolute top-full left-0 right-0 z-[100]">
+            <motion.div 
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.98 }}
+              className="mt-2 py-2 bg-white border border-slate-200 rounded-2xl shadow-elevated overflow-hidden shadow-premium"
+            >
             <div className="px-3 pb-2 mb-1 border-b border-slate-50">
                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Index Match</span>
             </div>
@@ -164,7 +163,8 @@ export default function SearchBar({ onCompanySelect }) {
                 )}
               </button>
             ))}
-          </motion.div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

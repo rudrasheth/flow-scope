@@ -6,44 +6,69 @@ import GraphView from './components/GraphView';
 import MapView from './components/MapView';
 import DetailsPanel from './components/DetailsPanel';
 
-const QUICK = ['Adani Ports','Reliance','Tata Steel','BYD','Volkswagen','Nestlé','Pfizer','Foxconn'];
+const QUICK = ['isuzu','škoda auto','cage warriors','kaipan','ineos group'];
 
 export default function App() {
   const [company,   setCompany]   = useState(null);
   const [hsn,       setHsn]       = useState(null);
+  const [hsnDesc,   setHsnDesc]   = useState('');
   const [graphData, setGraphData] = useState(null);
   const [selNode,   setSelNode]   = useState(null);
   const [loading,   setLoading]   = useState(false);
   const [stats,     setStats]     = useState(null);
   const [error,     setError]     = useState(null);
+  const [traceLog,  setTraceLog]  = useState('');
 
   useEffect(() => {
     axios.get('/api/graph/stats').then(({ data }) => setStats(data.stats)).catch(() => {});
   }, []);
 
-  const fetchGraph = useCallback(async (c, h) => {
-    if (!c || !h) return;
-    setLoading(true); setError(null);
+  const fetchGraph = useCallback(async (c, h, desc) => {
+    if (!c || !h || h === 'all') return;
+    setLoading(true); setError(null); setTraceLog('Connecting to AI trace engine...');
     try {
-      const { data } = await axios.get('/api/graph/traverse', {
-        params: { company: c.name, hsn: h, depth: 5 },
+      const payload = {
+        companyName: c.name,
+        companyCountry: c.country || 'Unknown',
+        targetHsCode: h,
+        hsnDescription: desc || '',
+        maxTiers: 1,
+      };
+      setTraceLog(`Tracing supply chain for ${c.name} (HS ${h})...`);
+      const { data } = await axios.post('/api/trace/expand', payload, { timeout: 120000 });
+
+      setGraphData({
+        nodes: data.nodes || [],
+        edges: data.edges || [],
+        tradeRoutes: data.tradeRoutes || [],
       });
-      setGraphData(data);
-    } catch {
-      setError('Failed to load supply chain.');
+      setTraceLog(`Found ${data.meta?.totalNodes || 0} companies across ${data.meta?.tiersTraversed || 0} tiers`);
+    } catch (err) {
+      console.error(err);
+      setError('Trace engine encountered an error. Check server logs.');
       setGraphData(null);
+      setTraceLog('');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    if (company && hsn) fetchGraph(company, hsn);
-  }, [company, hsn, fetchGraph]);
-
   const selectCompany = (c) => {
-    setCompany(c); setHsn(c ? 'all' : null);
-    setGraphData(null); setSelNode(null); setError(null);
+    setCompany(c); setHsn(null); setHsnDesc('');
+    setGraphData(null); setSelNode(null); setError(null); setTraceLog('');
+  };
+
+  const selectHsn = (code, description) => {
+    if (code === 'all') {
+      setHsn('all');
+      setHsnDesc('');
+      return;
+    }
+    setHsn(code);
+    setHsnDesc(description || '');
+    if (company && code !== 'all') {
+      fetchGraph(company, code, description);
+    }
   };
 
   return (
@@ -95,7 +120,7 @@ export default function App() {
           </div>
           <div className="flex-1 overflow-y-auto p-4">
             {company ? (
-              <HSNSelector companyName={company.name} onHSNSelect={setHsn} selectedHSN={hsn} />
+              <HSNSelector companyName={company.name} onHSNSelect={selectHsn} selectedHSN={hsn} />
             ) : (
               <div className="text-center py-10 px-4">
                 <div className="text-[11px] text-slate-300 font-medium leading-relaxed">
@@ -140,14 +165,32 @@ export default function App() {
           ) : (
             <div className="h-full relative">
               {loading && (
-                <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-10 flex items-center justify-center">
-                  <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"/>
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-4">
+                  <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"/>
+                  <div className="text-sm font-bold text-slate-600">{traceLog}</div>
+                  <div className="text-[10px] text-slate-400">Querying Gemini AI + UN Comtrade API...</div>
+                </div>
+              )}
+              {error && (
+                <div className="absolute top-4 left-4 right-4 z-10 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700 font-medium">
+                  {error}
+                </div>
+              )}
+              {!hsn && !loading && (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center max-w-sm px-6">
+                    <div className="text-4xl mb-4">🏭</div>
+                    <h3 className="text-lg font-bold text-slate-700 mb-2">Select an HSN Code</h3>
+                    <p className="text-sm text-slate-400">
+                      Pick a product category from the left panel to begin tracing the supply chain for <strong>{company.name}</strong>.
+                    </p>
+                  </div>
                 </div>
               )}
               <GraphView 
                 graphData={graphData} 
                 onNodeClick={setSelNode} 
-                selectedNode={selNode?.name}
+                selectedNode={selNode?.name || selNode?.id}
                 highlightCompany={company?.name}
               />
             </div>
