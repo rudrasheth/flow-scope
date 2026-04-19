@@ -126,3 +126,18 @@
 @keyframes flow-dash {
   to { stroke-dashoffset: -1000; }
 }
+
+/* Regional Impact Glow */
+.disaster-marker {
+  z-index: 1000 !important;
+}
+
+@keyframes pulse-shadow {
+  0% { box-shadow: 0 0 0px rgba(239, 68, 68, 0.7); transform: scale(0.95); }
+  70% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); transform: scale(1.1); }
+  100% { box-shadow: 0 0 0px rgba(239, 68, 68, 0); transform: scale(0.95); }
+}
+
+.leaflet-interactive {
+  filter: drop-shadow(0 0 3px rgba(0,0,0,0.1));
+}

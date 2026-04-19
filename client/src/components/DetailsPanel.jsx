@@ -164,12 +164,12 @@ export default function DetailsPanel({ selectedCompany, selectedNode, graphData 
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex px-4 pt-4 border-b border-slate-100 bg-white/40 backdrop-blur-sm sticky top-0 z-20">
-        {['overview', 'suppliers', 'customers'].map(t => (
+      <div className="flex px-4 pt-4 border-b border-slate-100 bg-white/40 backdrop-blur-sm sticky top-0 z-20 overflow-x-auto scrollbar-hide">
+        {['overview', 'intelligence', 'suppliers', 'customers'].map(t => (
           <button 
             key={t} 
             onClick={() => setTab(t)}
-            className={`relative flex-1 pb-3 text-[10px] font-black uppercase tracking-[0.15em] transition-all
+            className={`relative flex-[0_0_auto] px-2 pb-3 text-[10px] font-black uppercase tracking-[0.15em] transition-all
               ${tab === t ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
           >
             {t}
@@ -194,6 +194,10 @@ export default function DetailsPanel({ selectedCompany, selectedNode, graphData 
             transition={{ duration: 0.2 }}
             className="p-3"
           >
+            {tab === 'intelligence' && (
+              <IntelligenceReport companyName={details.name} companyCountry={details.country} />
+            )}
+            
             {tab === 'overview' && (
               <div className="space-y-3">
                 {details.hsnCodes?.length > 0 ? details.hsnCodes.map((h, i) => (
@@ -285,6 +289,123 @@ export default function DetailsPanel({ selectedCompany, selectedNode, graphData 
             )}
           </motion.div>
         </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function IntelligenceReport({ companyName, companyCountry }) {
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const generateAnalysis = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`/api/news?q=${encodeURIComponent(companyName)}`);
+        const articles = response.data.results || [];
+        
+        // Analyze risk keywords
+        const keywords = {
+          'disruption': ['strike', 'shortage', 'delay', 'protest', 'blocked', 'bottleneck', 'shipment', 'logistics'],
+          'financial': ['bankruptcy', 'loss', 'shares dropped', 'recession', 'debt', 'restructuring'],
+          'geopolitical': ['sanction', 'war', 'tariff', 'border', 'conflict', 'political', 'embargo']
+        };
+
+        let signals = [];
+        let riskScore = 0;
+
+        articles.forEach(article => {
+          const text = (article.title + ' ' + (article.description || '')).toLowerCase();
+          Object.entries(keywords).forEach(([category, words]) => {
+            words.forEach(word => {
+              if (text.includes(word)) {
+                signals.push({ category, word, title: article.title });
+                riskScore += 10;
+              }
+            });
+          });
+        });
+
+        const uniqueSignals = Array.from(new Set(signals.map(s => s.category)));
+        riskScore = Math.min(100, riskScore);
+
+        let narrative = "Overall operational baseline appears stable.";
+        if (riskScore > 60) {
+          narrative = `${companyName} is exhibiting critical supply chain tension. Recent reports highlight ${uniqueSignals.join(', ')} issues that could lead to immediate production stoppages. High-priority monitoring advised.`;
+        } else if (riskScore > 20) {
+          narrative = `The entity shows elevated risk due to signals in the ${uniqueSignals.join(' and ')} sectors. While not currently critical, the clustering of these reports suggests a shift in reliability.`;
+        } else {
+          narrative = `${companyName} currently maintains a resilient trade posture. No significant conflict signals or operational disruptions were detected in the latest trade intelligence cycle.`;
+        }
+
+        setReport({ score: riskScore, narrative, signals: signals.slice(0, 3), newsCount: articles.length });
+      } catch (err) {
+        console.error("Analysis failure:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    generateAnalysis();
+  }, [companyName]);
+
+  if (loading) return (
+    <div className="py-12 space-y-4">
+       <div className="h-4 w-full shimmer" />
+       <div className="h-24 w-full shimmer rounded-2xl" />
+       <div className="h-4 w-1/2 shimmer" />
+    </div>
+  );
+
+  if (!report) return null;
+
+  return (
+    <div className="space-y-4">
+      <div className="p-4 bg-slate-900 rounded-[2rem] text-white shadow-xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-8 opacity-10">
+           <Activity size={80} />
+        </div>
+        <div className="relative z-10">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Risk Index</span>
+            <div className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${report.score > 50 ? 'bg-red-500/20 text-red-300' : 'bg-blue-500/20 text-blue-300'}`}>
+              {report.score > 50 ? 'High Risk' : 'Standard'}
+            </div>
+          </div>
+          <div className="text-4xl font-black mb-2 tabular-nums">{report.score}%</div>
+          <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+             <motion.div initial={{ width: 0 }} animate={{ width: `${report.score}%` }} className={`h-full ${report.score > 50 ? 'bg-red-500' : 'bg-blue-500'}`} />
+          </div>
+        </div>
+      </div>
+
+      <div className="p-5 bg-white border border-slate-100 rounded-[2rem] shadow-premium">
+        <div className="flex items-center gap-2 mb-3">
+           <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600"><Building2 size={14} /></div>
+           <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight">Intelligence Narrative</span>
+        </div>
+        <p className="text-[12px] text-slate-600 leading-relaxed font-medium italic">"{report.narrative}"</p>
+      </div>
+
+      <div className="p-5 bg-blue-50 border border-blue-100 rounded-[2rem]">
+        <div className="flex items-center gap-2 mb-3">
+           <div className="p-1.5 rounded-lg bg-blue-600 text-white"><TrendingUp size={14} /></div>
+           <span className="text-[11px] font-black text-blue-700 uppercase tracking-tight">Strategic Advise</span>
+        </div>
+        <ul className="space-y-2">
+           <li className="flex items-start gap-2 text-[10px] font-bold text-blue-900/70">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 flex-shrink-0" />
+              <span>{report.score > 40 ? 'Diversify supplier base to mitigate identified tensions.' : 'Maintain current partnership tiering.'}</span>
+           </li>
+           <li className="flex items-start gap-2 text-[10px] font-bold text-blue-900/70">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1 flex-shrink-0" />
+              <span>Source backup logistics for {companyCountry} shipments.</span>
+           </li>
+        </ul>
+      </div>
+
+      <div className="text-center py-4">
+         <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">{report.newsCount} Data Streams Analyzed</span>
       </div>
     </div>
   );
