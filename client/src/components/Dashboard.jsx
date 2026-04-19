@@ -11,9 +11,19 @@ import {
 
 const COLORS = ['#D1D5DB', '#9CA3AF', '#6B7280', '#374151'];
 
+const FLAGS = {
+  'India':'🇮🇳','United States':'🇺🇸','China':'🇨🇳','Japan':'🇯🇵',
+  'South Korea':'🇰🇷','Germany':'🇩🇪','Taiwan':'🇹🇼','France':'🇫🇷',
+  'United Kingdom':'🇬🇧','Switzerland':'🇨🇭','Singapore':'🇸🇬','Finland':'🇫🇮',
+  'Sweden':'🇸🇪','Brazil':'🇧🇷','Australia':'🇦🇺','Norway':'🇳🇴',
+  'Belgium':'🇧🇪','Luxembourg':'🇱🇺','Netherlands':'🇳🇱','Denmark':'🇩🇰',
+  'Italy':'🇮🇹','Canada':'🇨🇦','Malaysia':'🇲🇾','Congo':'🇨🇩',
+  'Peru':'🇵🇪','Ivory Coast':'🇨🇮','Saudi Arabia':'🇸🇦','Ireland':'🇮🇪',
+};
+
 const generateHistoryData = () => {
   const data = [];
-  const years = [1960, 1970, 1980, 1990, 2000, 2010, 2020];
+  const years = [1960, 1970, 1980, 1990, 2000, 2010];
   years.forEach(year => {
     const base = (year - 1950) * 60000;
     data.push({
@@ -42,6 +52,7 @@ export default function Dashboard() {
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedYear, setSelectedYear] = useState('All');
 
   const fetchNews = async (query = 'trade OR supply chain') => {
     setNewsLoading(true);
@@ -64,22 +75,31 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    axios.get('/api/dashboard')
-      .then(({ data }) => setData(data))
+    setLoading(true);
+    axios.get(`/api/dashboard?year=${selectedYear}`)
+      .then(({ data }) => {
+        setData(data);
+        // Automatically fetch news for the top 2 trade partners
+        if (data.topCountries && data.topCountries.length >= 2) {
+          const topTwo = `${data.topCountries[0].country} and ${data.topCountries[1].country} trade news`;
+          fetchNews(topTwo);
+        } else {
+          fetchNews();
+        }
+      })
       .catch(err => {
         console.error("Dashboard fetch error:", err);
-        // Fallback or empty state to prevent crash
         setData({
           topCompanies: [],
           topCountries: [],
           topSectors: [],
-          recentActivity: []
+          recentActivity: [],
+          summary: {}
         });
+        fetchNews();
       })
       .finally(() => setLoading(false));
-      
-    fetchNews();
-  }, []);
+  }, [selectedYear]);
 
   if (loading || !data) return (
     <div className="flex items-center justify-center h-full text-gray-400">
@@ -94,7 +114,7 @@ export default function Dashboard() {
     <div className="min-h-full p-6 flex gap-6 text-gray-900 bg-[#F9FAFB]">
       {/* ─── LEFT COLUMN (MAIN) ─── */}
       <div className="flex-1 flex flex-col gap-6 min-w-0">
-        
+
         {/* STATS ROW */}
         <div className="flex gap-6">
           <div className="flex-1 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
@@ -124,17 +144,15 @@ export default function Dashboard() {
         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col h-[400px]">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-base font-semibold">Imports and Exports Over Time</h3>
-            <div className="flex items-center gap-2 text-sm text-gray-600 border border-gray-200 px-3 py-1.5 rounded-md">
-              Year: 2020 <ChevronDown size={16} />
-            </div>
+
           </div>
-          
+
           <div className="flex-1">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={historyData} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 0 }} barSize={16}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#E5E7EB" />
-                <XAxis type="number" domain={[0, 6000000]} axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6B7280'}} tickFormatter={(v) => v === 0 ? '0M' : `${v/1000000}M`} />
-                <YAxis dataKey="year" type="category" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#6B7280'}} />
+                <XAxis type="number" domain={[0, 6000000]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} tickFormatter={(v) => v === 0 ? '0M' : `${v / 1000000}M`} />
+                <YAxis dataKey="year" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#6B7280' }} />
                 <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' }} />
                 <Bar dataKey="importGoods" stackId="a" fill="#E5E7EB" />
                 <Bar dataKey="exportGoods" stackId="a" fill="#9CA3AF" />
@@ -143,7 +161,7 @@ export default function Dashboard() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          
+
           <div className="flex items-center gap-6 mt-4 border-t border-gray-100 pt-4">
             <div className="flex items-center gap-2 text-xs text-gray-500"><div className="w-3 h-3 rounded-full bg-[#E5E7EB]"></div> Sum of Import Goods</div>
             <div className="flex items-center gap-2 text-xs text-gray-500"><div className="w-3 h-3 rounded-full bg-[#9CA3AF]"></div> Sum of Export Goods</div>
@@ -159,8 +177,8 @@ export default function Dashboard() {
             <h3 className="text-sm font-semibold mb-4">Services Trade Trend</h3>
             <div className="flex-1 min-h-0">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={historyData} margin={{top:5, right:0, left:-30, bottom:0}}>
-                  <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#9CA3AF'}} padding={{left: 10, right: 10}} />
+                <AreaChart data={historyData} margin={{ top: 5, right: 0, left: -30, bottom: 0 }}>
+                  <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} padding={{ left: 10, right: 10 }} />
                   <YAxis axisLine={false} tickLine={false} tick={false} />
                   <Area type="monotone" dataKey="exportServices" stackId="1" stroke="#374151" fill="#374151" />
                   <Area type="monotone" dataKey="importServices" stackId="1" stroke="#9CA3AF" fill="#9CA3AF" />
@@ -173,152 +191,128 @@ export default function Dashboard() {
           <div className="w-[320px] bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col shrink-0">
             <h3 className="text-base font-semibold mb-4">Export-to-Import Ratio</h3>
             <div className="flex items-center justify-between border border-gray-200 rounded-lg p-3 mb-6 text-sm">
-               <span className="font-medium text-gray-700 truncate">Global Ratio <span className="text-gray-400 font-normal ml-1">avg</span></span>
-               <span className="font-bold flex items-center gap-1.5"><span className="text-gray-400 text-xs">⊘</span> 1.26</span>
+              <span className="font-medium text-gray-700 truncate">Global Ratio <span className="text-gray-400 font-normal ml-1">avg</span></span>
+              <span className="font-bold flex items-center gap-1.5"><span className="text-gray-400 text-xs">⊘</span> 1.26</span>
             </div>
             <div className="flex-1 flex items-center justify-between pl-2 min-h-0">
-               <div className="flex flex-col gap-5 text-xs text-gray-500 font-medium">
-                  <div className="flex items-center gap-3"><div className="w-4 h-1.5 bg-gray-400 rounded-full"></div> Growth</div>
-                  <div className="flex items-center gap-3"><div className="w-4 h-1.5 bg-gray-300 rounded-full"></div> Volume</div>
-                  <div className="flex items-center gap-3"><div className="w-4 h-1.5 bg-gray-200 rounded-full"></div> Balance</div>
-               </div>
-               <div className="w-28 h-28 relative mr-4 shrink-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={[{v:1.26}, {v:0.4}]} innerRadius={36} outerRadius={52} dataKey="v" stroke="none" startAngle={90} endAngle={-270}>
-                        <Cell fill="#374151" />
-                        <Cell fill="#E5E7EB" />
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
-                    <div className="text-2xl font-bold leading-none text-gray-900">1.26</div>
-                    <div className="text-[7px] text-gray-500 font-medium mt-1.5 uppercase text-center leading-tight">Ratio</div>
-                  </div>
-               </div>
+              <div className="flex flex-col gap-5 text-xs text-gray-500 font-medium">
+                <div className="flex items-center gap-3"><div className="w-4 h-1.5 bg-gray-400 rounded-full"></div> Growth</div>
+                <div className="flex items-center gap-3"><div className="w-4 h-1.5 bg-gray-300 rounded-full"></div> Volume</div>
+                <div className="flex items-center gap-3"><div className="w-4 h-1.5 bg-gray-200 rounded-full"></div> Balance</div>
+              </div>
+              <div className="w-28 h-28 relative mr-4 shrink-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={[{ v: 1.26 }, { v: 0.4 }]} innerRadius={36} outerRadius={52} dataKey="v" stroke="none" startAngle={90} endAngle={-270}>
+                      <Cell fill="#374151" />
+                      <Cell fill="#E5E7EB" />
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
+                  <div className="text-2xl font-bold leading-none text-gray-900">1.26</div>
+                  <div className="text-[7px] text-gray-500 font-medium mt-1.5 uppercase text-center leading-tight">Ratio</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* FULL WIDTH BOTTOM ROW: Top Sectors */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col flex-1">
-          <h3 className="text-base font-semibold mb-6 shrink-0">Top Sectors by Trade Volume</h3>
-          <div className="flex-1 flex flex-col justify-evenly">
-             {(!topSectors || topSectors.length === 0) ? (
-               <div className="text-sm text-gray-400 italic">No sector data available.</div>
-             ) : topSectors.slice(0, 3).map((s, i) => (
-               <div key={i} className="flex items-center gap-4 text-sm">
-                  <div className="w-2.5 h-2.5 rounded-full bg-gray-400 shrink-0"></div>
-                  <span className="w-48 truncate text-gray-600 font-medium">{s.product}</span>
-                  <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-400 rounded-full" style={{width: `${topSectors[0]?.volume ? (s.volume/topSectors[0].volume)*100 : 0}%`}}></div>
-                  </div>
-                  <span className="font-bold w-16 text-right">{fmt(s.volume)}</span>
-                  <span className="text-gray-400 w-16 text-right font-medium">+{topSectors[0]?.volume ? ((s.volume/topSectors[0].volume)*15).toFixed(1) : '0.0'}%</span>
-               </div>
-             ))}
-          </div>
-        </div>
 
       </div>
 
       {/* ─── RIGHT COLUMN ─── */}
       <div className="w-96 flex flex-col gap-6 shrink-0">
-         
-         {/* Top Companies */}
-         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col">
-           <div className="flex justify-between items-center mb-5">
-             <h3 className="text-base font-semibold">Top Companies</h3>
-             <div className="flex items-center gap-2 text-xs text-gray-500 border border-gray-200 px-2 py-1 rounded-md">
-               Global <ChevronDown size={12} className="inline ml-1"/>
-             </div>
-           </div>
-           <div className="flex justify-between text-xs font-medium text-gray-400 mb-3 px-1">
-             <span className="w-32">Company Name</span>
-             <span className="flex-1 text-right">Volume</span>
-             <span className="w-20 text-right">Balance</span>
-           </div>
-           <div className="space-y-4">
-             {topCompanies.slice(0, 5).map((c, i) => (
-               <div key={i} className="flex items-center text-sm border-b border-gray-50 pb-3 last:border-0 last:pb-0">
-                 <span className="w-32 truncate font-medium text-gray-800">{c.name.split(' ')[0]}</span>
-                 <span className="flex-1 text-right font-semibold text-gray-600">{fmt(c.totalVolume)}</span>
-                 <span className="w-20 text-right text-green-600 font-medium">+{c.percentOfMax}%</span>
-               </div>
-             ))}
-           </div>
-         </div>
 
-         {/* Top Countries */}
-         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col">
-           <div className="flex justify-between items-center mb-5">
-             <h3 className="text-base font-semibold">Top Partners</h3>
-             <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1 cursor-pointer">ALL <ChevronRight size={12}/></span>
-           </div>
-           <div className="space-y-5">
-             {topCountries.slice(0, 5).map((c, i) => (
-               <div key={i} className="flex flex-col gap-2 border-b border-gray-50 pb-4 last:border-0 last:pb-0">
-                  <div className="flex justify-between items-center text-sm font-medium">
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 rounded-full bg-gray-200"></div>
-                      <span className="text-gray-800">{c.country}</span>
-                    </div>
-                    <div className="flex flex-col items-end leading-tight">
-                      <span className="font-bold text-gray-900">{fmt(c.volume)}</span>
-                      <span className="text-[10px] text-gray-400 mt-0.5">{i % 2 === 0 ? '+' : '-'}33.7M <ChevronRight size={10} className="inline"/></span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full w-full overflow-hidden mt-1">
-                     <div className="h-full bg-gray-400 rounded-full" style={{width: `${topCountries[0]?.volume ? (c.volume/topCountries[0].volume)*100 : 0}%`}}></div>
-                  </div>
-               </div>
-             ))}
-           </div>
-         </div>
-
-         {/* Trade News */}
-         <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col">
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-base font-semibold">Trade News</h3>
-              <button onClick={() => fetchNews(searchQuery || 'trade OR supply chain')} disabled={newsLoading} className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors">
-                {newsLoading ? 'LOADING...' : 'REFRESH'} <RefreshCw size={12} className={newsLoading ? 'animate-spin' : ''} />
-              </button>
-            </div>
-            
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Search..."
-                className="flex-1 border border-gray-200 rounded-md px-3 py-1 text-sm focus:outline-none focus:border-gray-400"
-              />
-              <button onClick={handleSearch} className="bg-gray-900 text-white px-3 py-1 rounded-md text-sm font-medium">
-                Search
-              </button>
-            </div>
-
-            <div className="space-y-5">
-              {newsLoading ? (
-                 <div className="text-sm text-gray-400 animate-pulse">Fetching latest news...</div>
-              ) : (!Array.isArray(news) || news.length === 0) ? (
-                 <div className="text-sm text-gray-400 italic">No recent news found.</div>
-              ) : news.slice(0, 3).map((item, i) => (
-                <div key={i} className="flex gap-4 text-sm">
-                   <div className="mt-1 text-gray-400 shrink-0"><FileText size={16} /></div>
-                   <div className="flex-1 leading-tight min-w-0">
-                     <a href={item.link} target="_blank" rel="noreferrer" className="font-medium text-gray-900 truncate block hover:underline">
-                       {item.title}
-                     </a>
-                     <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                       {item.description || item.content || 'No description available for this article.'}
-                     </div>
-                   </div>
-                </div>
+        {/* Top Companies */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col">
+          <div className="flex justify-between items-center mb-5">
+            <h3 className="text-base font-semibold">Top Companies</h3>
+            <select 
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="text-[10px] font-bold text-gray-500 bg-transparent border border-gray-200 px-2 py-1 rounded-md outline-none cursor-pointer"
+            >
+              <option value="All">All Time</option>
+              {Array.from({length: 27}, (_, i) => 2000 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
               ))}
-            </div>
-         </div>
+            </select>
+          </div>
+          <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-tighter mb-4 px-1">
+            <span className="w-24">Company</span>
+            <span className="flex-1 text-right">Imp</span>
+            <span className="flex-1 text-right">Exp</span>
+            <span className="w-12 text-right">Ratio</span>
+          </div>
+          <div className="space-y-4">
+            {topCompanies.slice(0, 5).map((c, i) => (
+              <div key={i} className="flex items-center text-sm border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                <span className="w-24 truncate font-medium text-gray-800">{c.name.split(' ')[0]}</span>
+                <span className="flex-1 text-right font-semibold text-gray-500">{fmt(c.importVolume)}</span>
+                <span className="flex-1 text-right font-semibold text-gray-900">{fmt(c.exportVolume)}</span>
+                <span className={`w-12 text-right font-bold ${c.ratio === '-' ? 'text-gray-400' : (parseFloat(c.ratio) >= 1 ? 'text-green-600' : 'text-red-500')}`}>
+                  {c.ratio}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+
+        {/* Trade News */}
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm flex flex-col">
+          <div className="flex justify-between items-center mb-5">
+            <h3 className="text-base font-semibold">Trade News</h3>
+            <button onClick={() => fetchNews(searchQuery || 'trade OR supply chain')} disabled={newsLoading} className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1 cursor-pointer hover:text-gray-900 transition-colors">
+              {newsLoading ? 'LOADING...' : 'REFRESH'} <RefreshCw size={12} className={newsLoading ? 'animate-spin' : ''} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 mb-4">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Search..."
+              className="flex-1 border border-gray-200 rounded-md px-3 py-1 text-sm focus:outline-none focus:border-gray-400"
+            />
+            <button onClick={handleSearch} className="bg-gray-900 text-white px-3 py-1 rounded-md text-sm font-medium">
+              Search
+            </button>
+          </div>
+
+          <div className="space-y-5">
+            {newsLoading ? (
+              <div className="text-sm text-gray-400 animate-pulse">Fetching latest news...</div>
+            ) : (!Array.isArray(news) || news.length === 0) ? (
+              <div className="text-sm text-gray-400 italic">No recent news found.</div>
+            ) : news.slice(0, 3).map((item, i) => (
+              <a 
+                key={i} 
+                href={item.link} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="flex gap-4 text-sm hover:bg-slate-50 p-3 rounded-xl -mx-3 transition-all cursor-pointer group border border-transparent hover:border-slate-100"
+              >
+                <div className="mt-1 text-gray-400 shrink-0 group-hover:text-blue-500 transition-colors"><FileText size={18} /></div>
+                <div className="flex-1 leading-tight min-w-0">
+                  <div className="font-bold text-gray-900 truncate block group-hover:text-blue-600 transition-colors">
+                    {item.title}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">
+                    {item.description || item.content || 'No description available for this article.'}
+                  </div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-2.5 flex justify-between items-center">
+                    <span>{item.source_id || 'News Feed'}</span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-all text-blue-500 translate-x-2 group-hover:translate-x-0">READ ARTICLE →</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
 
       </div>
     </div>
