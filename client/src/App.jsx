@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Cloud, Search as SearchIcon, ChevronLeft, ChevronRight, Info, Package, ArrowRightLeft, X } from 'lucide-react';
+import { LayoutDashboard, Cloud, Search as SearchIcon, ChevronLeft, ChevronRight, Info, Package, ArrowRightLeft, X, BarChart3 } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import SearchBar from './components/SearchBar';
 import HSNSelector from './components/HSNSelector';
 import GraphView from './components/GraphView';
 import MapView from './components/MapView';
 import DetailsPanel from './components/DetailsPanel';
+import AnalyticsModal from './components/AnalyticsModal';
 
 export default function App() {
   const [page, setPage] = useState('dashboard');
@@ -24,6 +25,7 @@ export default function App() {
   const [error,     setError]     = useState(null);
   const [traceLog,  setTraceLog]  = useState('');
   const [expandingNode, setExpandingNode] = useState(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const graphRef = useRef(null);
   useEffect(() => { graphRef.current = graphData; }, [graphData]);
@@ -234,13 +236,22 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* Bottom: Network Legend */}
+                   {/* Bottom: Network Legend + Analytics Button */}
                   <div className="p-6 bg-gray-50 border-t border-gray-100 space-y-3">
                      <span className="text-[9px] font-black uppercase text-gray-400">Network Map Status</span>
                      <div className="flex items-center gap-2 text-[10px]">
                         <div className={`w-2 h-2 rounded-full ${hsn ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
                         <span className="font-bold text-gray-500 uppercase">{hsn ? 'Live Visualization' : 'Waiting for Filter Selection...'}</span>
                      </div>
+                     {graphData && (
+                       <button
+                         onClick={() => setShowAnalytics(true)}
+                         className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-3 bg-black hover:bg-gray-800 text-white rounded-xl transition-all font-black text-[10px] uppercase tracking-wider shadow-lg hover:shadow-xl"
+                       >
+                         <BarChart3 size={14} />
+                         View Network Analytics
+                       </button>
+                     )}
                   </div>
                 </div>
               )}
@@ -304,6 +315,18 @@ export default function App() {
               <DetailsPanel selectedNode={selNode} graphData={graphData} />
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* 📊 ANALYTICS MODAL */}
+      <AnimatePresence>
+        {showAnalytics && graphData && (
+          <AnalyticsModal
+            graphData={graphData}
+            company={company}
+            hsn={hsn}
+            onClose={() => setShowAnalytics(false)}
+          />
         )}
       </AnimatePresence>
 
