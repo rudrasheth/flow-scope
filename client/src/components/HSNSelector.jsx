@@ -36,7 +36,7 @@ export default function HSNSelector({ companyName, onHSNSelect, selectedHSN }) {
         whileHover={{ x: 4 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => onHSNSelect('all', 'Global Aggregate')}
-        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider
+        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-black uppercase tracking-wider
           border transition-all duration-200 group
           ${selectedHSN === 'all'
             ? 'bg-blue-600 text-white border-blue-600 shadow-blue-glow'
@@ -47,7 +47,7 @@ export default function HSNSelector({ companyName, onHSNSelect, selectedHSN }) {
           <Layers size={14} className={selectedHSN === 'all' ? 'text-white' : 'text-blue-500'} />
           <span>Global Aggregate</span>
         </div>
-        <div className={`px-2 py-0.5 rounded-full text-[9px] font-black ${selectedHSN === 'all' ? 'bg-blue-500/30' : 'bg-slate-100'}`}>
+        <div className={`px-2.5 py-1 rounded-full text-xs font-black ${selectedHSN === 'all' ? 'bg-blue-500/30' : 'bg-slate-100'}`}>
           {codes.length}
         </div>
       </motion.button>
@@ -71,16 +71,16 @@ export default function HSNSelector({ companyName, onHSNSelect, selectedHSN }) {
           >
             <div className="flex items-center justify-between w-full mb-1">
               <div className="flex items-center gap-2">
-                <Hash size={10} className={selectedHSN === h.code ? 'text-violet-200' : 'text-violet-400'} />
-                <span className="font-black text-[11px] tracking-tight">{h.code}</span>
+                <Hash size={14} className={selectedHSN === h.code ? 'text-violet-200' : 'text-violet-400'} />
+                <span className="font-black text-sm tracking-tight">{h.code}</span>
               </div>
               {h.totalQuantity > 0 && (
-                <span className={`text-[9px] font-black tabular-nums px-1.5 py-0.5 rounded-md ${selectedHSN === h.code ? 'bg-white/20' : 'bg-violet-50 text-violet-600'}`}>
+                <span className={`text-xs font-black tabular-nums px-2 py-0.5 rounded-md ${selectedHSN === h.code ? 'bg-white/20' : 'bg-violet-50 text-violet-600'}`}>
                   {fmt(h.totalQuantity)}
                 </span>
               )}
             </div>
-            <div className={`text-[9px] font-bold text-left truncate w-full uppercase tracking-tight ${selectedHSN === h.code ? 'text-violet-100' : 'text-slate-400'}`}>
+            <div className={`text-xs font-bold text-left truncate w-full uppercase tracking-tight ${selectedHSN === h.code ? 'text-violet-100' : 'text-slate-500'}`}>
               {h.description}
             </div>
             

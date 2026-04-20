@@ -55,29 +55,31 @@ export default function App() {
 
     setLoading(true); setError(null); setTraceLog('SYNTHESIZING NETWORK FOR ' + h + '...');
     try {
-      const payload = { companyName: c.name, companyCountry: c.country || 'Unknown', targetHsCode: h, hsnDescription: desc || '', maxTiers: 3 };
+      const payload = { companyName: c.name, companyCountry: c.country || 'Unknown', targetHsCode: h, hsnDescription: desc || '', maxTiers: 2 };
       const { data } = await axios.post('/api/trace/expand', payload, { timeout: 120000 });
       const result = { nodes: data.nodes || [], edges: data.edges || [], tradeRoutes: data.tradeRoutes || [] };
       setGraphData(result);
       setTraceLog(`VIEWING ${data.meta?.totalNodes || 0} PARTNERS`);
 
-      // Save to history cache (max 10 entries)
-      setSearchHistory(prev => {
-        const exists = prev.some(e => e.cacheKey === cacheKey);
-        if (exists) return prev;
-        const entry = {
-          cacheKey,
-          companyName: c.name,
-          companyCountry: c.country,
-          hsn: h,
-          hsnDesc: desc || h,
-          graphData: result,
-          nodeCount: result.nodes.length,
-          edgeCount: result.edges.length,
-          timestamp: Date.now(),
-        };
-        return [entry, ...prev].slice(0, 10);
-      });
+      // Save to history cache only if we actually found partners (avoid caching rate-limited empty results)
+      if (result.nodes.length > 1) {
+        setSearchHistory(prev => {
+          const exists = prev.some(e => e.cacheKey === cacheKey);
+          if (exists) return prev;
+          const entry = {
+            cacheKey,
+            companyName: c.name,
+            companyCountry: c.country,
+            hsn: h,
+            hsnDesc: desc || h,
+            graphData: result,
+            nodeCount: result.nodes.length,
+            edgeCount: result.edges.length,
+            timestamp: Date.now(),
+          };
+          return [entry, ...prev].slice(0, 10);
+        });
+      }
     } catch (err) {
       setError('Trace engine error. Try again.');
     } finally {
@@ -125,11 +127,25 @@ export default function App() {
   }, [expandNode]);
 
   return (
-    <div className="relative h-screen w-screen bg-white text-black font-sans overflow-hidden flex">
+    <div className="relative h-screen w-screen bg-transparent text-black font-sans overflow-hidden flex">
+      {page === 'dashboard' && (
+        <>
+          <video 
+            autoPlay 
+            loop 
+            muted 
+            playsInline 
+            className="absolute inset-0 w-full h-full object-cover -z-10 pointer-events-none"
+          >
+            <source src="/Product_Video_Generator.mp4" type="video/mp4" />
+          </video>
+          <div className="absolute inset-0 bg-white/10 -z-10 pointer-events-none" />
+        </>
+      )}
       
       {/* 🚀 MAIN SIDEBAR (Home Only) */}
       {page === 'dashboard' && (
-        <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-gray-100 flex flex-col shrink-0 z-50 transition-all duration-300 shadow-sm`}>
+        <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} bg-white/30 backdrop-blur-md border-r border-white/40 flex flex-col shrink-0 z-50 transition-all duration-300 shadow-sm`}>
           <div className="p-6 flex flex-col h-full text-black">
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-8`}>
                <div className="flex items-center gap-2">
@@ -166,7 +182,7 @@ export default function App() {
       )}
 
       {/* 🎯 MAIN VIEWPORT */}
-      <main className="flex-1 relative flex flex-col min-w-0 bg-white">
+      <main className="flex-1 relative flex flex-col min-w-0 bg-transparent">
         
         {page === 'analytics' && (
           <div className="absolute inset-0 z-0 bg-[#f8fafc]">
@@ -178,7 +194,7 @@ export default function App() {
               )
             ) : (
               /* Idle state before BOM filter click */
-              <div className="w-full h-full flex items-center justify-center opacity-30 grayscale pointer-events-none">
+              <div className="w-full h-full flex items-center justify-center pointer-events-none">
                  <MapView tradeRoutes={[]} nodes={[]} />
               </div>
             )}
@@ -186,10 +202,10 @@ export default function App() {
         )}
 
         {/* Global Control Bar */}
-        <header className={`h-16 flex items-center justify-between px-6 z-[60] shrink-0 ${page === 'dashboard' ? 'bg-white border-b border-gray-100' : 'pointer-events-none'}`}>
+        <header className={`h-16 flex items-center justify-between px-6 z-[60] shrink-0 ${page === 'dashboard' ? 'bg-white/30 backdrop-blur-md border-b border-white/40 shadow-sm' : 'pointer-events-none'}`}>
           <div className="flex items-center gap-4 pointer-events-auto">
             {page === 'analytics' && (
-              <button onClick={() => { setPage('dashboard'); setCompany(null); setHsn(null); setGraphData(null); }} className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-gray-100 text-black rounded-lg transition-all font-bold text-xs border border-gray-200 shadow-sm">
+              <button onClick={() => { setPage('dashboard'); setCompany(null); setHsn(null); setGraphData(null); }} className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-100 text-black rounded-lg transition-all font-bold text-sm border border-gray-200 shadow-sm">
                 ← Exit
               </button>
             )}
@@ -210,7 +226,7 @@ export default function App() {
         {/* content Layer */}
         <div className={`flex-1 relative overflow-hidden ${page === 'dashboard' ? '' : 'pointer-events-none'}`}>
           {page === 'dashboard' ? (
-             <div className="h-full overflow-y-auto bg-gray-50"><Dashboard stats={stats} onExplore={() => setPage('analytics')} onTrace={(c) => { setCompany(c); setPage('analytics'); setHsn(null); setGraphData(null); }} /></div>
+             <div className="h-full overflow-y-auto"><Dashboard stats={stats} onExplore={() => setPage('analytics')} onTrace={(c) => { setCompany(c); setPage('analytics'); setHsn(null); setGraphData(null); }} /></div>
           ) : (
             <div className="absolute inset-0 z-50 pointer-events-none">
               
@@ -224,11 +240,11 @@ export default function App() {
                         <Info size={20} className="text-white" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="font-black text-[10px] text-gray-400 uppercase tracking-widest leading-none mb-1">Company Dossier</span>
-                        <span className="font-extrabold text-sm truncate">{company.name}</span>
+                        <span className="font-black text-xs text-gray-500 uppercase tracking-widest leading-none mb-1">Company Dossier</span>
+                        <span className="font-extrabold text-lg truncate text-slate-800">{company.name}</span>
                       </div>
                     </div>
-                    <div className="text-[11px] leading-relaxed text-gray-600 font-bold bg-gray-50 p-5 rounded-2xl border border-gray-100 italic">
+                    <div className="text-sm leading-relaxed text-gray-700 font-medium bg-gray-50 p-5 rounded-2xl border border-gray-100 italic">
                       "{company.description || 'Verified global trade entity found in intelligence database.'}"
                     </div>
                   </div>
@@ -237,8 +253,8 @@ export default function App() {
                   <div className="flex-1 overflow-y-auto p-6 space-y-8">
                     <div>
                       <div className="flex items-center gap-2 mb-4">
-                         <Package size={16} className="text-black" />
-                         <span className="font-black text-[10px] uppercase tracking-wider text-black">Bill of Materials Filter</span>
+                         <Package size={18} className="text-black" />
+                         <span className="font-black text-xs uppercase tracking-wider text-black">Bill of Materials Filter</span>
                       </div>
                       
                       {/* CRITICAL: Implement further only ON CLICK */}
@@ -255,10 +271,10 @@ export default function App() {
                     {graphData && (
                       <div className="pt-6 border-t border-gray-100">
                          <div className="flex items-center gap-2 mb-4">
-                            <Cloud size={16} className="text-black" />
-                            <span className="font-black text-[10px] uppercase tracking-wider text-black">Importer Insights (Live)</span>
+                            <Cloud size={18} className="text-black" />
+                            <span className="font-black text-xs uppercase tracking-wider text-black">Importer Insights (Live)</span>
                          </div>
-                         <div className="space-y-3">
+                         <div className="space-y-4">
                             {(() => {
                               // Aggregate unique concurrent importers for the current HSN being viewed
                               const allImporters = Array.from(new Set(
