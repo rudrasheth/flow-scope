@@ -137,7 +137,9 @@ export default function DetailsPanel({ selectedCompany, selectedNode, graphData 
             <h3 className="text-base font-black text-slate-800 truncate leading-tight tracking-tight italic">{details.name}</h3>
             <div className="flex items-center gap-1.5 mt-1.5 text-slate-400">
                <MapPin size={10} className="text-blue-500" />
-               <span className="text-[10px] font-bold uppercase tracking-wider">{details.country}</span>
+               <span className="text-[10px] font-bold uppercase tracking-wider">
+                 {details.city ? `${details.city}, ` : ''}{details.country}
+               </span>
             </div>
           </div>
         </div>

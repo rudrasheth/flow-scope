@@ -88,9 +88,14 @@ class CSVGraphService {
         .on('data', (row) => {
           const name = row.company_name?.trim();
           const desc = row.wikidata_description?.trim();
+          const city = row.wikidata_hq?.trim();
           const country = normalizeCountry(row.country);
           if (name && desc) {
-            this.descriptions.set(name.toLowerCase(), { description: desc, country });
+            this.descriptions.set(name.toLowerCase(), { 
+              description: desc, 
+              country,
+              city: city || null
+            });
           }
         })
         .on('end', resolve)
@@ -143,6 +148,30 @@ class CSVGraphService {
     const code = String(hsCode).trim();
     const entry = this.hsTaxonomy.get(code) || this.hsTaxonomy.get(code.substring(0, 2));
     return entry || null;
+  }
+
+  /**
+   * Validates and falls back to the most specific HS code present in taxonomy.
+   * Checks 6-digit -> 4-digit -> 2-digit.
+   */
+  getMostGranularValidHs(hsCode) {
+    if (!hsCode) return "85"; // Default fallback
+    const code = String(hsCode).trim();
+    
+    // Check 6-digit
+    if (code.length >= 6 && this.hsTaxonomy.has(code.substring(0, 6))) {
+      return code.substring(0, 6);
+    }
+    // Check 4-digit
+    if (code.length >= 4 && this.hsTaxonomy.has(code.substring(0, 4))) {
+      return code.substring(0, 4);
+    }
+    // Check 2-digit
+    if (code.length >= 2 && this.hsTaxonomy.has(code.substring(0, 2))) {
+      return code.substring(0, 2);
+    }
+    
+    return "85"; // Default fallback if completely invalid
   }
 
   getCompanyDescription(name) {
@@ -218,10 +247,12 @@ class CSVGraphService {
     if (!company) return null;
     const asCustomer = this.edges.filter(e => e.buyer === companyName);
     const asSupplier = this.edges.filter(e => e.supplier === companyName);
+    const dossier = this.descriptions.get(companyName.toLowerCase());
     return {
       name: company.name,
       country: company.country,
-      description: this.getCompanyDescription(companyName),
+      city: dossier?.city || null,
+      description: dossier?.description || this.getCompanyDescription(companyName),
       totalTradeVolume: company.totalVolume,
       supplierCount: new Set(asCustomer.map(e => e.supplier)).size,
       customerCount: new Set(asSupplier.map(e => e.buyer)).size,

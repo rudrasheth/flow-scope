@@ -50,10 +50,10 @@ export default function GraphView({ graphData, onNodeClick, onExpandNode, expand
       existing.destroy();
     }
 
-    const qs   = graphData.edges.map(e => e.quantity || e.tradeValue || 1);
-    const minQ = Math.min(...qs) || 1;
-    const maxQ = Math.max(...qs) || 1;
-    const wt   = q => maxQ === minQ ? 2.5 : 2 + ((q - minQ) / (maxQ - minQ)) * 6;
+    const qs   = (graphData.edges || []).map(e => e.quantity || e.tradeValue || 1);
+    const minQ = qs.length > 0 ? Math.min(...qs) : 1;
+    const maxQ = qs.length > 0 ? Math.max(...qs) : 1;
+    const wt   = q => (maxQ === minQ || isNaN(maxQ)) ? 2.5 : 2 + ((q - minQ) / (maxQ - minQ)) * 6;
 
     const elements = [
       ...graphData.nodes.map(n => ({

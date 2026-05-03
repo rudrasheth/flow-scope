@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import { io } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, Cloud, Search as SearchIcon, ChevronLeft, ChevronRight, Info, Package, ArrowRightLeft, X, BarChart3, History, Clock } from 'lucide-react';
 import Dashboard from './components/Dashboard';
@@ -28,10 +29,47 @@ export default function App() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [searchHistory, setSearchHistory] = useState([]);
 
+  const socketRef = useRef(null);
+  const [socketId, setSocketId] = useState(null);
+
   const graphRef = useRef(null);
   const historyRef = useRef([]);
   useEffect(() => { graphRef.current = graphData; }, [graphData]);
   useEffect(() => { historyRef.current = searchHistory; }, [searchHistory]);
+
+  // ─── Socket.io Connection ───
+  useEffect(() => {
+    const socket = io(window.location.origin.replace('5173', '3001')); // Adjust for dev port
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('[Socket] Connected:', socket.id);
+      setSocketId(socket.id);
+    });
+
+    socket.on('graph-update', ({ type, data }) => {
+      setGraphData(prev => {
+        const current = prev || { nodes: [], edges: [], tradeRoutes: [] };
+        if (type === 'node') {
+          if (current.nodes.some(n => n.id === data.id)) return current;
+          return { ...current, nodes: [...current.nodes, data] };
+        }
+        if (type === 'edge') {
+          const edgeId = `${data.from}-${data.to}`;
+          if (current.edges.some(e => `${e.source}-${e.target}` === edgeId)) return current;
+          const newEdge = { ...data, source: data.from, target: data.to, type: data.relation };
+          return { ...current, edges: [...current.edges, newEdge] };
+        }
+        return current;
+      });
+    });
+
+    socket.on('status', ({ message }) => {
+      setTraceLog(message.toUpperCase());
+    });
+
+    return () => socket.disconnect();
+  }, []);
 
   useEffect(() => {
     axios.get('/api/graph/stats').then(({ data }) => setStats(data.stats)).catch(() => {});
@@ -54,10 +92,21 @@ export default function App() {
     }
 
     setLoading(true); setError(null); setTraceLog('SYNTHESIZING NETWORK FOR ' + h + '...');
+    setGraphData({ nodes: [], edges: [], tradeRoutes: [] }); // Reset for live updates
+
     try {
-      const payload = { companyName: c.name, companyCountry: c.country || 'Unknown', targetHsCode: h, hsnDescription: desc || '', maxTiers: 2 };
+      const payload = { 
+        companyName: c.name, 
+        companyCountry: c.country || 'Unknown', 
+        targetHsCode: h, 
+        hsnDescription: desc || '', 
+        maxTiers: 2,
+        socketId: socketRef.current?.id // Send socket ID for streaming
+      };
       const { data } = await axios.post('/api/trace/expand', payload, { timeout: 120000 });
       const result = { nodes: data.nodes || [], edges: data.edges || [], tradeRoutes: data.tradeRoutes || [] };
+      
+      // Ensure we have the final state (socket might miss some messages or arrive out of order)
       setGraphData(result);
       setTraceLog(`VIEWING ${data.meta?.totalNodes || 0} PARTNERS`);
 
@@ -104,7 +153,13 @@ export default function App() {
     let traceHsCode = current.edges.find(e => e.source === node.id)?.hsn || hsn || '87';
     setExpandingNode(node.id);
     try {
-      const payload = { companyName: node.id, companyCountry: node.country || 'Unknown', targetHsCode: traceHsCode, maxTiers: 2 };
+      const payload = { 
+        companyName: node.id, 
+        companyCountry: node.country || 'Unknown', 
+        targetHsCode: traceHsCode, 
+        maxTiers: 2,
+        socketId: socketRef.current?.id
+      };
       const { data } = await axios.post('/api/trace/expand', payload);
       setGraphData(prev => ({
         nodes: [...prev.nodes, ...(data.nodes || []).filter(n => !prev.nodes.some(ex => ex.id === n.id))],
@@ -279,7 +334,7 @@ export default function App() {
                               // Aggregate unique concurrent importers for the current HSN being viewed
                               const allImporters = Array.from(new Set(
                                 graphData.edges
-                                  .filter(e => e.hsn === hsn || e.hsn.startsWith(String(hsn).substring(0,2)))
+                                  .filter(e => e.hsn && (e.hsn === hsn || e.hsn.startsWith(String(hsn).substring(0,2))))
                                   .flatMap(e => e.importers || [])
                               )).filter(name => name !== company.name).slice(0, 5);
 

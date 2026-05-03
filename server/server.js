@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 const { initDriver } = require('./config/neo4j');
 const csvService = require('./services/csvService');
 const companiesRouter = require('./routes/companies');
@@ -10,6 +12,14 @@ const traceRouter = require('./routes/trace');
 const dashboardRouter = require('./routes/dashboard');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Adjust this in production
+    methods: ["GET", "POST"]
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 // ─── Prevent server crash on unhandled errors ───
@@ -23,6 +33,12 @@ process.on('uncaughtException', (err) => {
 // ─── Middleware ───
 app.use(cors());
 app.use(express.json());
+
+// Attach io to request
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
 
 // ─── API Routes ───
 app.use('/api/companies', companiesRouter);
@@ -55,6 +71,15 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ─── Socket.io Connection ───
+io.on('connection', (socket) => {
+  console.log(`[Socket] User connected: ${socket.id}`);
+  
+  socket.on('disconnect', () => {
+    console.log(`[Socket] User disconnected: ${socket.id}`);
+  });
+});
+
 // ─── Start Server ───
 async function start() {
   console.log('\n  ╔═══════════════════════════════════════╗');
@@ -73,8 +98,9 @@ async function start() {
   // Try Neo4j connection (optional)
   await initDriver();
 
-  const server = app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`\n  ✓ Server running on http://localhost:${PORT}`);
+    console.log(`  ✓ WebSocket enabled and ready`);
     console.log(`  ✓ API available at http://localhost:${PORT}/api\n`);
   });
 

@@ -66,6 +66,32 @@ function getProfileKeywords(hsChapter) {
 /**
  * Get HS description from csvService taxonomy or HS_PROFILE_KEYWORDS.
  */
+const CITY_COORDS = {
+  'Mladá Boleslav': [50.41, 14.90], 'Yokohama': [35.44, 139.63], 'London': [51.50, -0.12], 'Toledo': [41.65, -83.53],
+  'Smržovka': [50.73, 15.24], 'Naberezhnye Chelny': [55.74, 52.42], 'Round Rock': [30.50, -97.67], 'Crawley': [51.11, -0.18],
+  'New York City': [40.71, -74.00], 'Fort Worth': [32.75, -97.33], 'Offenbach am Main': [50.10, 8.76], 'Taipei': [25.03, 121.56],
+  'Vysoké Mýto': [49.95, 16.16], 'Stamford': [41.05, -73.53], 'Seoul': [37.56, 126.97], 'Dallas': [32.77, -96.79],
+  'Ängelholm': [56.24, 12.86], 'Sant\'Agata Bolognese': [44.66, 11.13], 'Liberec': [50.76, 15.05], 'Stuttgart': [48.77, 9.18],
+  'Armonk': [41.12, -73.71], 'Tokyo': [35.67, 139.65], 'Beijing': [39.90, 116.40], 'Shanghai': [31.23, 121.47],
+  'Mumbai': [19.07, 72.87], 'Bengaluru': [12.97, 77.59], 'Chennai': [13.08, 80.27], 'New Taipei': [25.01, 121.46],
+  'Hsinchu City': [24.81, 120.96], 'Wolfsburg': [52.42, 10.78], 'Munich': [48.13, 11.58], 'Cologne': [50.93, 6.95],
+  'Essen': [51.45, 7.01], 'Hamburg': [53.55, 9.99], 'Dortmund': [51.51, 7.46], 'Detroit': [42.33, -83.04],
+  'Chicago': [41.87, -87.62], 'San Francisco': [37.77, -122.41], 'San Jose': [37.33, -121.88], 'Palo Alto': [37.44, -122.14],
+  'Mountain View': [37.38, -122.08], 'Santa Clara': [37.35, -121.95], 'Austin': [30.26, -97.74], 'Houston': [29.76, -95.36],
+  'Paris': [48.85, 2.35], 'Lyon': [45.76, 4.83], 'Berlin': [52.52, 13.40], 'Frankfurt': [50.11, 8.68],
+  'Amsterdam': [52.36, 4.90], 'Rotterdam': [51.92, 4.47], 'Brussels': [50.85, 4.35], 'Milan': [45.46, 9.18],
+  'Turin': [45.07, 7.68], 'Bangkok': [13.75, 100.50], 'Singapore': [1.35, 103.81], 'Hong Kong': [22.31, 114.16],
+  'Osaka': [34.69, 135.50], 'Nagoya': [35.18, 136.90], 'Hiroshima': [34.38, 132.45], 'Toyota': [35.08, 137.15],
+};
+
+function getCoords(country, city) {
+  if (city && CITY_COORDS[city]) return CITY_COORDS[city];
+  
+  const base = COUNTRY_COORDS[country] || [20, 77];
+  // Jitter slightly so nodes don't overlap perfectly if city is unknown
+  return [base[0] + (Math.random() - 0.5) * 2, base[1] + (Math.random() - 0.5) * 2];
+}
+
 function getHsLabel(hsCode) {
   const desc = csvService.getHsDescription?.(hsCode);
   if (desc) return desc;
@@ -88,8 +114,23 @@ router.post('/expand', async (req, res) => {
       maxTiers = 2,
       traceMode = 'hybrid',
       strictGemini = false,
+      socketId, // Get socketId from request
     } = req.body;
+    
     if (!companyName || !targetHsCode) return res.status(400).json({ error: 'Missing parameters' });
+
+    const io = req.io;
+    const emitUpdate = (type, data) => {
+      if (io && socketId) {
+        io.to(socketId).emit('graph-update', { type, data });
+      }
+    };
+
+    const emitStatus = (message) => {
+      if (io && socketId) {
+        io.to(socketId).emit('status', { message });
+      }
+    };
 
     const normalizedMode = String(traceMode || 'hybrid').toLowerCase();
     const allowGemini = normalizedMode !== 'comtrade-only';
@@ -98,13 +139,24 @@ router.post('/expand', async (req, res) => {
     let geminiSuccessCount = 0;
     let geminiFailureCount = 0;
 
+    // Queue for BFS traversal
     const queue = [{ name: companyName, country: companyCountry || 'Unknown', hs: targetHsCode, tier: 0 }];
     const allNodes = new Map();
     const allEdges = [];
-    const visited = new Set([companyName]);
+    const visitedCompanies = new Set([companyName]);
+
+    emitStatus(`Starting expansion for ${companyName}...`);
 
     // Initial Node from DB/CSV
     let initialDesc = csvService.getCompanyDescription(companyName) || 'Global industrial entity.';
+    let initialCity = null;
+    
+    const dossier = csvService.descriptions.get(companyName.toLowerCase());
+    if (dossier) {
+      initialDesc = dossier.description || initialDesc;
+      initialCity = dossier.city;
+    }
+
     if (getIsConnected() && (!initialDesc || initialDesc.includes('Global industrial'))) {
       const session = getDriver().session();
       try {
@@ -113,212 +165,188 @@ router.post('/expand', async (req, res) => {
       } finally { await session.close(); }
     }
 
-    allNodes.set(companyName, { 
-      id: companyName, label: companyName, country: companyCountry || 'Unknown', tier: 0, 
+    const rootId = `c_${companyName}`;
+    const rootNode = { 
+      id: rootId, type: 'Company', label: companyName, country: companyCountry || 'Unknown', city: initialCity, tier: 0, 
       description: initialDesc,
-      coords: COUNTRY_COORDS[companyCountry] || [20, 77],
+      coords: getCoords(companyCountry, initialCity),
       source: 'user-input',
       confidence: 'anchor'
-    });
+    };
+    allNodes.set(rootId, rootNode);
+    emitUpdate('node', rootNode);
 
-    while (queue.length > 0 && allNodes.size < 40) {
+    while (queue.length > 0 && allNodes.size < 100) {
       const current = queue.shift();
       if (current.tier >= maxTiers) continue;
 
-      // ─── STEP 1: Gemini proposes upstream HS inputs for the current node HS ───
-      let upstreamHsCodes = [];
+      emitStatus(`Processing ${current.name} (Tier ${current.tier})...`);
+
+      // ─── STEP 1: Gemini proposes Structured BOM ───
+      let bomList = [];
       let usedGemini = false;
       let usedFallbackBom = false;
+
       if (allowGemini) {
+        emitStatus(`Extracting BOM for ${current.name}...`);
         geminiAttemptCount += 1;
         try {
-          upstreamHsCodes = await bomService.getUpstreamHsCodes(current.hs, current.description || '');
-          usedGemini = Array.isArray(upstreamHsCodes) && upstreamHsCodes.length > 0;
-          if (usedGemini) {
-            geminiSuccessCount += 1;
-          }
+          bomList = await bomService.getStructuredBOM(current.hs, current.description || '');
+          usedGemini = Array.isArray(bomList) && bomList.length > 0;
+          if (usedGemini) geminiSuccessCount += 1;
         } catch (err) {
           geminiFailureCount += 1;
           if (strictGemini) {
-            return res.status(502).json({
-              error: `Gemini upstream inference failed for HS ${current.hs}`,
-              detail: err.message,
-              mode: normalizedMode,
-            });
+            return res.status(502).json({ error: `Gemini BOM inference failed for HS ${current.hs}`, detail: err.message });
           }
-          // In non-strict mode, use static BOM fallback chapters before collapsing to current HS.
-          if (typeof bomService._fallbackBom === 'function') {
-            try {
-              const chapter = String(current.hs).substring(0, 2);
-              const fallbackCodes = bomService._fallbackBom(chapter);
-              if (Array.isArray(fallbackCodes) && fallbackCodes.length > 0) {
-                upstreamHsCodes = fallbackCodes;
-                usedFallbackBom = true;
-              }
-            } catch (_fallbackErr) {
-              // Keep traversal alive with current HS if fallback lookup also fails.
-            }
-          }
-
-          // Keep traversal alive with current HS if Gemini is temporarily unavailable.
-          usedGemini = false;
           console.warn(`[TRACE] Gemini unavailable for HS ${current.hs}: ${err.message}`);
         }
       }
 
-      const hsInputs = (Array.isArray(upstreamHsCodes) && upstreamHsCodes.length > 0
-        ? upstreamHsCodes
-        : [String(current.hs).substring(0, 2)]
-      )
-        .map((code) => String(code).replace('.', '').substring(0, 2))
-        .filter(Boolean)
-        .filter((code, idx, arr) => arr.indexOf(code) === idx)
-        .slice(0, 4);
+      if (!usedGemini && typeof bomService._fallbackStructuredBom === 'function') {
+        const chapter = String(current.hs).substring(0, 2);
+        bomList = bomService._fallbackStructuredBom(chapter);
+        usedFallbackBom = Array.isArray(bomList) && bomList.length > 0;
+      }
 
-      // ─── STEP 2: For each upstream HS input, fetch Comtrade import partners ───
-      for (const hsInput of hsInputs) {
-        const partnerCountries = await comtradeService.getTopPartners(current.country, hsInput);
+      // Limit branching for speed
+      for (const item of bomList.slice(0, 3)) {
+        // ─── STEP 2: Granular HS Validation ───
+        const validHs = typeof csvService.getMostGranularValidHs === 'function' 
+          ? csvService.getMostGranularValidHs(item.hs)
+          : String(item.hs || '85').substring(0, 2);
+          
+        const hsLabel = getHsLabel(validHs);
+        
+        // ─── STEP 3: Add Component Node & Edge ───
+        const compNodeId = `comp_${validHs}_${item.component.replace(/[^a-zA-Z0-9]/g, '')}`;
+        if (!allNodes.has(compNodeId)) {
+          const compNode = {
+            id: compNodeId, type: 'Component', label: item.component, hsCode: validHs, tier: current.tier + 1,
+            coords: null // Will be placed near company in frontend
+          };
+          allNodes.set(compNodeId, compNode);
+          emitUpdate('node', compNode);
+        }
+        
+        const reqEdge = {
+          from: `c_${current.name}`, to: compNodeId, relation: 'REQUIRES',
+          provenance: usedGemini ? 'gemini' : 'fallback'
+        };
+        allEdges.push({ ...reqEdge, source: reqEdge.from, target: reqEdge.to, type: reqEdge.relation });
+        emitUpdate('edge', reqEdge);
+
+        // ─── STEP 4: Fetch Trade Data from Comtrade ───
+        emitStatus(`Fetching trade data for ${item.component}...`);
+        const partnerCountries = await comtradeService.getTopPartners(current.country, validHs);
         if (!Array.isArray(partnerCountries) || partnerCountries.length === 0) continue;
 
-        const hsLabel = getHsLabel(hsInput);
-        const profileKeywords = getProfileKeywords(hsInput);
+        // ─── STEP 5: Resolve supplier entities in partner countries ───
+        const keywords = item.keywords || getProfileKeywords(validHs);
 
-        // ─── STEP 3: Resolve supplier entities in partner countries ───
-        for (const partner of partnerCountries.slice(0, 3)) {
+        for (const partner of partnerCountries.slice(0, 2)) {
           const partnerCountry = partner.country;
+          const locNodeId = `loc_${partnerCountry.replace(/[^a-zA-Z0-9]/g, '')}`;
+          
+          if (!allNodes.has(locNodeId)) {
+            const locNode = {
+              id: locNodeId, type: 'Location', label: partnerCountry,
+              coords: COUNTRY_COORDS[partnerCountry] || [0,0]
+            };
+            allNodes.set(locNodeId, locNode);
+            emitUpdate('node', locNode);
+          }
+          
+          const impEdge = {
+            from: compNodeId, to: locNodeId, relation: 'IMPORTED_FROM', tradeValue: partner.tradeValue
+          };
+          allEdges.push({ ...impEdge, source: impEdge.from, target: impEdge.to, type: impEdge.relation });
+          emitUpdate('edge', impEdge);
 
           let matchedCompanies = [];
 
           if (getIsConnected()) {
             const session = getDriver().session();
             try {
-              // Build a Cypher WHERE clause that filters by description keywords
-              // to ensure we pick industrially-relevant companies
               let keywordClauses = '';
-              if (profileKeywords && profileKeywords.length > 0) {
-                keywordClauses = 'AND (' + profileKeywords.slice(0, 4)
-                  .map((_, i) => `toLower(s.description) CONTAINS $kw${i}`)
-                  .join(' OR ') + ')';
+              if (keywords && keywords.length > 0) {
+                keywordClauses = 'AND (' + keywords.slice(0, 3).map((_, i) => `toLower(s.description) CONTAINS $kw${i}`).join(' OR ') + ')';
               }
-
-              const params = {
-                partnerCountry,
-                currentName: current.name,
-              };
-              if (profileKeywords) {
-                profileKeywords.slice(0, 4).forEach((kw, i) => { params[`kw${i}`] = kw.toLowerCase(); });
-              }
+              const params = { partnerCountry, currentName: current.name };
+              if (keywords) keywords.slice(0, 3).forEach((kw, i) => { params[`kw${i}`] = kw.toLowerCase(); });
 
               const result = await session.run(`
                 MATCH (s:Company)
-                WHERE toLower(s.country) = toLower($partnerCountry)
-                  AND s.name <> $currentName
-                  AND s.description IS NOT NULL
-                  ${keywordClauses}
-                RETURN s.name AS name,
-                       s.country AS country,
-                       s.description AS desc
-                ORDER BY size(s.description) DESC
-                LIMIT 2
+                WHERE toLower(s.country) = toLower($partnerCountry) AND s.name <> $currentName AND s.description IS NOT NULL ${keywordClauses}
+                RETURN s.name AS name, s.country AS country, s.description AS desc ORDER BY size(s.description) DESC LIMIT 2
               `, params);
-
-              matchedCompanies = result.records.map(r => ({
-                name: r.get('name'),
-                country: r.get('country') || partnerCountry,
-                description: r.get('desc') || '',
-              }));
-
-              // Fallback: if no description-matched companies, try any company in that country
+              matchedCompanies = result.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '' }));
+              
               if (matchedCompanies.length === 0) {
-                const fallbackResult = await session.run(`
-                  MATCH (s:Company)
-                  WHERE toLower(s.country) = toLower($partnerCountry)
-                    AND s.name <> $currentName
-                    AND s.description IS NOT NULL
-                    AND size(s.description) > 5
-                  RETURN s.name AS name,
-                         s.country AS country,
-                         s.description AS desc
-                  LIMIT 1
+                const fbResult = await session.run(`
+                  MATCH (s:Company) WHERE toLower(s.country) = toLower($partnerCountry) AND s.name <> $currentName AND s.description IS NOT NULL AND size(s.description) > 5
+                  RETURN s.name AS name, s.country AS country, s.description AS desc LIMIT 1
                 `, { partnerCountry, currentName: current.name });
-
-                matchedCompanies = fallbackResult.records.map(r => ({
-                  name: r.get('name'),
-                  country: r.get('country') || partnerCountry,
-                  description: r.get('desc') || '',
-                }));
+                matchedCompanies = fbResult.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '' }));
               }
-            } finally {
-              await session.close();
-            }
+            } finally { await session.close(); }
           } else {
-            // CSV fallback: use description-based matching from csvService
-            const csvCandidates = csvService.findCompaniesByCountryAndProfile(partnerCountry, profileKeywords);
-            matchedCompanies = csvCandidates
-              .filter(c => c.name !== current.name)
-              .slice(0, 2)
-              .map(c => ({ name: c.name, country: c.country, description: c.description }));
-
-            // If no keyword match, just pick companies from that country
+            // CSV Fallback
+            const csvCandidates = csvService.findCompaniesByCountryAndProfile(partnerCountry, keywords);
+            matchedCompanies = csvCandidates.filter(c => c.name !== current.name).slice(0, 2).map(c => ({ name: c.name, country: c.country, description: c.description }));
             if (matchedCompanies.length === 0) {
-              const anyInCountry = Array.from(csvService.companies.values())
-                .filter(c => c.country && c.country.toLowerCase() === String(partnerCountry).toLowerCase() && c.name !== current.name)
-                .slice(0, 1);
-              matchedCompanies = anyInCountry.map(c => ({
-                name: c.name,
-                country: c.country,
-                description: csvService.getCompanyDescription(c.name) || '',
-              }));
+              const anyInCountry = Array.from(csvService.companies.values()).filter(c => c.country && c.country.toLowerCase() === String(partnerCountry).toLowerCase() && c.name !== current.name).slice(0, 1);
+              matchedCompanies = anyInCountry.map(c => ({ name: c.name, country: c.country, description: csvService.getCompanyDescription(c.name) || '' }));
             }
           }
 
-          // ─── STEP 4: Add matched companies to graph ───
+          if (matchedCompanies.length === 0) {
+            matchedCompanies.push({
+              name: `National ${hsLabel} Export Co. (${partnerCountry})`,
+              country: partnerCountry,
+              description: `Synthetic supplier generated for ${partnerCountry} to visualize the trade route.`
+            });
+          }
+
+          // ─── STEP 6: Add Supplier Node & Recursion Edge ───
           for (const matched of matchedCompanies) {
-            if (visited.has(matched.name)) continue;
-            visited.add(matched.name);
+            const supplierId = `c_${matched.name}`;
+            const dossier = csvService.descriptions.get(matched.name.toLowerCase());
+            const supDesc = dossier?.description || csvService.getCompanyDescription(matched.name) || matched.description || 'Supply chain partner.';
+            const supCity = dossier?.city || null;
+            
+            if (!allNodes.has(supplierId)) {
+              const supNode = {
+                id: supplierId, type: 'Company', label: matched.name, country: matched.country || partnerCountry, city: supCity,
+                tier: current.tier + 1, coords: getCoords(matched.country || partnerCountry, supCity), description: supDesc
+              };
+              allNodes.set(supplierId, supNode);
+              emitUpdate('node', supNode);
+            }
+            
+            const supEdge = { from: locNodeId, to: supplierId, relation: 'SUPPLIED_BY' };
+            allEdges.push({ ...supEdge, source: supEdge.from, target: supEdge.to, type: supEdge.relation });
+            emitUpdate('edge', supEdge);
 
-            const supCountry = matched.country || partnerCountry || 'Unknown';
-            const supDesc = csvService.getCompanyDescription(matched.name) || matched.description || 'Supply chain partner.';
-            const baseCoords = COUNTRY_COORDS[supCountry] || [Math.random()*40, Math.random()*100];
-            const jitterCoords = [baseCoords[0] + (Math.random()-0.5)*2, baseCoords[1] + (Math.random()-0.5)*2];
+            // Add logical direct edge for frontend ease (optional but requested structure usually likes it)
+            const directEdge = { source: supplierId, target: `c_${current.name}`, type: 'SUPPLIES_DIRECT', component: item.component, hsn: validHs, tradeValue: partner.tradeValue };
+            allEdges.push(directEdge);
+            // We don't necessarily need to emit this one if the UI builds it from the relation chain, but good for maps
 
-            allNodes.set(matched.name, {
-              id: matched.name,
-              label: matched.name,
-              country: supCountry,
-              tier: current.tier + 1,
-              coords: jitterCoords,
-              description: supDesc,
-              source: usedGemini ? 'gemini+comtrade' : (usedFallbackBom ? 'fallback-bom+comtrade' : 'comtrade-only'),
-              confidence: usedGemini ? 'high' : (usedFallbackBom ? 'medium' : 'low'),
-            });
-
-            allEdges.push({
-              source: matched.name,
-              target: current.name,
-              hsn: hsInput,
-              product: hsLabel,
-              type: current.tier === 0 ? 'IMPORT' : 'UPSTREAM_IMPORT',
-              partnerCountry,
-              tradeValue: partner.tradeValue || 0,
-              provenance: usedGemini ? 'gemini+comtrade' : (usedFallbackBom ? 'fallback-bom+comtrade' : 'comtrade-only'),
-              evidence: {
-                mode: usedGemini ? 'gemini+comtrade' : (usedFallbackBom ? 'fallback-bom+comtrade' : 'comtrade-only'),
-                upstreamHsInput: hsInput,
-                partnerCountry,
-                tradeValue: partner.tradeValue || 0,
-              },
-            });
-
-            queue.push({ name: matched.name, country: supCountry, hs: hsInput, tier: current.tier + 1 });
+            if (!visitedCompanies.has(matched.name)) {
+              visitedCompanies.add(matched.name);
+              queue.push({ name: matched.name, country: matched.country || partnerCountry, hs: validHs, tier: current.tier + 1, description: supDesc });
+            }
           }
         }
       }
     }
 
-    const tradeRoutes = allEdges.map(e => {
+    emitStatus('Expansion complete.');
+
+    const tradeRoutes = allEdges.filter(e => e.type === 'SUPPLIES_DIRECT' || e.type === 'UPSTREAM_IMPORT' || e.type === 'IMPORT').map(e => {
       const s = allNodes.get(e.source), t = allNodes.get(e.target);
-      return (s && t) ? { from: s.coords, to: t.coords, fromName: s.id, toName: t.id, hsn: e.hsn, type: e.type } : null;
+      return (s && t && s.coords && t.coords) ? { from: s.coords, to: t.coords, fromName: s.label, toName: t.label, hsn: e.hsn, type: e.type } : null;
     }).filter(r => r);
 
     res.json({

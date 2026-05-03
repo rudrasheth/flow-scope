@@ -124,7 +124,9 @@ export default function MapView({ tradeRoutes = [], nodes = [] }) {
                   <div className="text-[10px] text-slate-300 italic mb-2">
                     {n.description || 'No description available'}
                   </div>
-                  <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest text-right">{n.country}</div>
+                  <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest text-right">
+                    {n.city ? `${n.city}, ` : ''}{n.country}
+                  </div>
                 </div>
               </Popup>
             </Marker>

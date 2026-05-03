@@ -18,7 +18,7 @@ class BomService {
    * HS chapters/headings (2 or 4 digit codes) required to manufacture it.
    * Includes caching, rate-limit detection, and static fallback.
    */
-  async getUpstreamHsCodes(targetHsCode, targetDescription) {
+  async getStructuredBOM(targetHsCode, targetDescription) {
     // Normalize to 2-digit chapter for caching (reduces unique calls)
     const cacheKey = String(targetHsCode).substring(0, 2);
 
@@ -34,7 +34,7 @@ class BomService {
         throw new Error(`${message} Provide a valid API key/quota to continue authentic BOM traversal.`);
       }
       console.log(`${message} Using fallback.`);
-      return this._fallbackBom(cacheKey);
+      return this._fallbackStructuredBom(cacheKey);
     }
 
     if (!process.env.GEMINI_API_KEY) {
@@ -42,7 +42,7 @@ class BomService {
          throw new Error('[BOM] GEMINI_API_KEY not set. Strict mode blocks fallback BOM generation.');
        }
        console.warn('[BOM] GEMINI_API_KEY not set. Using fallback.');
-       return this._fallbackBom(cacheKey);
+       return this._fallbackStructuredBom(cacheKey);
     }
 
     const prompt = `
@@ -54,12 +54,21 @@ class BomService {
     Description: ${targetDescription}
 
     Identify the key upstream raw materials and primary components required to manufacture this product.
-    Provide your output ONLY as a JSON array of strings containing the 2-digit HS chapter codes for these inputs.
+    Provide your output ONLY as a JSON array of objects.
+    Each object MUST have:
+    - "component": A human-readable name of the component (e.g., "Lithium-ion Battery", "Steel", "Semiconductor"). Avoid generic terms.
+    - "hs": The best possible HS code for this component (prefer 4 or 6 digit codes).
+    - "keywords": An array of 2-3 keyword strings related to this component.
+
     Include only the most important 3-5 upstream categories.
     Do not include any other text, markdown, or explanation.
     
     Example response format:
-    ["72", "85", "28", "39"]
+    [
+      { "component": "Lithium-ion Battery", "hs": "850760", "keywords": ["battery", "cell"] },
+      { "component": "Steel", "hs": "7208", "keywords": ["steel", "iron"] },
+      { "component": "Semiconductor", "hs": "8541", "keywords": ["chip", "silicon"] }
+    ]
     `;
 
     // Single attempt with quick fallback
@@ -74,8 +83,7 @@ class BomService {
       });
 
       const text = response.text;
-      const codes = JSON.parse(text);
-      const result = Array.isArray(codes) ? codes.map(c => String(c)) : [];
+      const result = JSON.parse(text);
 
       // Reset quota flag on success
       this.quotaExhausted = false;
@@ -104,64 +112,70 @@ class BomService {
     }
 
     // Use fallback
-    return this._fallbackBom(cacheKey);
+    return this._fallbackStructuredBom(cacheKey);
   }
 
   /**
    * Comprehensive static fallback BOM rules when Gemini is unavailable.
    * Covers all major HS chapters used in supply chain tracing.
    */
-  _fallbackBom(hsChapter) {
+  _fallbackStructuredBom(hsChapter) {
     const fallback = {
       // ─── Finished Goods ───
-      '87': ['72', '76', '39', '40', '85'],            // Vehicles → Steel, Aluminum, Plastics, Rubber, Electronics
-      '88': ['72', '76', '85', '84'],                   // Aircraft → Steel, Aluminum, Electronics, Machinery
-      '86': ['72', '85', '84'],                         // Rail → Steel, Electronics, Machinery
-      '89': ['72', '76', '84'],                         // Ships → Steel, Aluminum, Machinery
-      
+      '87': [
+        { component: "Steel", hs: "72", keywords: ["steel", "metal"] },
+        { component: "Aluminum", hs: "76", keywords: ["aluminum", "metal"] },
+        { component: "Electronics", hs: "85", keywords: ["electronic", "circuit"] }
+      ],
+      '88': [
+        { component: "Aluminum", hs: "76", keywords: ["aluminum", "metal"] },
+        { component: "Titanium", hs: "81", keywords: ["titanium", "metal"] },
+        { component: "Electronics", hs: "85", keywords: ["electronic", "avionics"] }
+      ],
       // ─── Electronics & Machinery ───
-      '85': ['72', '74', '28', '39', '26'],             // Electrical → Steel, Copper, Chemicals, Plastics, Ores
-      '84': ['72', '76', '74', '39', '85'],             // Machinery → Steel, Aluminum, Copper, Plastics, Electronics
-      '90': ['70', '85', '39', '72'],                   // Instruments → Glass, Electronics, Plastics, Steel
-      
+      '85': [
+        { component: "Copper Wire", hs: "74", keywords: ["copper", "wire"] },
+        { component: "Plastics", hs: "39", keywords: ["plastic", "polymer"] },
+        { component: "Semiconductors", hs: "8541", keywords: ["chip", "silicon"] }
+      ],
+      '84': [
+        { component: "Steel", hs: "72", keywords: ["steel", "iron"] },
+        { component: "Aluminum", hs: "76", keywords: ["aluminum", "metal"] },
+        { component: "Electronics", hs: "85", keywords: ["electronic", "circuit"] }
+      ],
       // ─── Pharmaceuticals & Chemicals ───
-      '30': ['29', '28', '39', '70', '48'],             // Pharma → Organic chem, Inorganic, Plastics, Glass, Paper
-      '29': ['27', '28', '25'],                         // Organic chemicals → Fuels, Inorganic, Minerals
-      '28': ['25', '26'],                               // Inorganic chemicals → Minerals, Ores
-      '38': ['29', '28', '27'],                         // Chemical products → Organic, Inorganic, Fuels
-      
+      '30': [
+        { component: "Organic Chemicals", hs: "29", keywords: ["organic", "chemical"] },
+        { component: "Inorganic Chemicals", hs: "28", keywords: ["inorganic", "chemical"] }
+      ],
       // ─── Base Materials ───
-      '72': ['26', '27', '25'],                         // Iron/Steel → Ores, Fuels, Minerals
-      '73': ['72'],                                      // Steel articles → Steel
-      '74': ['26', '27'],                               // Copper → Ores, Fuels
-      '75': ['26', '27'],                               // Nickel → Ores, Fuels
-      '76': ['26', '27'],                               // Aluminum → Ores, Fuels
-      '78': ['26', '27'],                               // Lead → Ores, Fuels
-      '79': ['26', '27'],                               // Zinc → Ores, Fuels
-      '80': ['26', '27'],                               // Tin → Ores, Fuels
-      
-      // ─── Plastics & Rubber ───
-      '39': ['27', '29', '28'],                         // Plastics → Fuels, Organic chem, Inorganic chem
-      '40': ['27', '29'],                               // Rubber → Fuels, Organic chem
-      
-      // ─── Textiles ───
-      '61': ['52', '54', '39'],                         // Clothing → Cotton, Synthetics, Plastics
-      '62': ['52', '54', '39'],                         // Clothing → Cotton, Synthetics, Plastics
-      '52': ['25'],                                      // Cotton → Minerals (terminal-ish)
-      '54': ['29', '27'],                               // Man-made filaments → Organic chem, Fuels
-      
-      // ─── Raw Materials (TERMINAL — no upstream) ───
-      '27': ['25'],                                      // Fuels → Minerals
-      '26': [],                                          // Ores → Raw material
-      '25': [],                                          // Minerals → Raw material
-      '01': [],                                          // Animals
-      '02': [],                                          // Meat
-      '03': [],                                          // Fish
-      '10': [],                                          // Cereals
+      '72': [
+        { component: "Iron Ore", hs: "2601", keywords: ["iron", "ore"] },
+        { component: "Coal", hs: "2701", keywords: ["coal", "carbon"] }
+      ],
+      '73': [
+        { component: "Steel", hs: "72", keywords: ["steel", "iron"] }
+      ],
+      '76': [
+        { component: "Bauxite", hs: "2606", keywords: ["bauxite", "ore"] }
+      ]
     };
-    const result = fallback[hsChapter] || ['72', '85', '28'];
+    
+    const defaultFallback = [
+      { component: "Steel", hs: "72", keywords: ["steel", "iron"] },
+      { component: "Electronics", hs: "85", keywords: ["electronic", "circuit"] },
+      { component: "Chemicals", hs: "28", keywords: ["chemical"] }
+    ];
+    
+    const terminalChapters = ['27', '26', '25', '01', '02', '03', '10'];
+    if (terminalChapters.includes(hsChapter)) {
+      this.cache.set(hsChapter, []);
+      return [];
+    }
+
+    const result = fallback[hsChapter] || defaultFallback;
     this.cache.set(hsChapter, result);
-    console.log(`[BOM] Using fallback for HS ${hsChapter}: ${result.join(', ') || '(terminal)'}`);
+    console.log(`[BOM] Using fallback for HS ${hsChapter}`);
     return result;
   }
 }
