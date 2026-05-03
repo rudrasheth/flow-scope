@@ -178,39 +178,47 @@ router.post('/expand', async (req, res) => {
 
     while (queue.length > 0 && allNodes.size < 100) {
       const current = queue.shift();
-      if (current.tier >= maxTiers) continue;
+      if (!current || current.tier >= maxTiers) continue;
 
       emitStatus(`Processing ${current.name} (Tier ${current.tier})...`);
 
       // ─── STEP 1: Gemini proposes Structured BOM ───
       let bomList = [];
       let usedGemini = false;
-      let usedFallbackBom = false;
 
       if (allowGemini) {
         emitStatus(`Extracting BOM for ${current.name}...`);
         geminiAttemptCount += 1;
         try {
-          bomList = await bomService.getStructuredBOM(current.hs, current.description || '');
-          usedGemini = Array.isArray(bomList) && bomList.length > 0;
-          if (usedGemini) geminiSuccessCount += 1;
+          const result = await bomService.getStructuredBOM(current.hs, current.description || '');
+          if (Array.isArray(result) && result.length > 0) {
+            bomList = result;
+            usedGemini = true;
+            geminiSuccessCount += 1;
+          }
         } catch (err) {
           geminiFailureCount += 1;
+          console.warn(`[TRACE] Gemini failed for HS ${current.hs}: ${err.message}`);
           if (strictGemini) {
             return res.status(502).json({ error: `Gemini BOM inference failed for HS ${current.hs}`, detail: err.message });
           }
-          console.warn(`[TRACE] Gemini unavailable for HS ${current.hs}: ${err.message}`);
         }
       }
 
-      if (!usedGemini && typeof bomService._fallbackStructuredBom === 'function') {
+      if (!usedGemini) {
         const chapter = String(current.hs).substring(0, 2);
-        bomList = bomService._fallbackStructuredBom(chapter);
-        usedFallbackBom = Array.isArray(bomList) && bomList.length > 0;
+        bomList = (typeof bomService._fallbackStructuredBom === 'function') 
+          ? bomService._fallbackStructuredBom(chapter) 
+          : [];
       }
+
+      // Ensure bomList is an array before processing
+      if (!Array.isArray(bomList)) bomList = [];
 
       // Limit branching for speed
       for (const item of bomList.slice(0, 3)) {
+        if (!item || !item.component) continue;
+
         // ─── STEP 2: Granular HS Validation ───
         const validHs = typeof csvService.getMostGranularValidHs === 'function' 
           ? csvService.getMostGranularValidHs(item.hs)
@@ -223,7 +231,7 @@ router.post('/expand', async (req, res) => {
         if (!allNodes.has(compNodeId)) {
           const compNode = {
             id: compNodeId, type: 'Component', label: item.component, hsCode: validHs, tier: current.tier + 1,
-            coords: null // Will be placed near company in frontend
+            coords: null 
           };
           allNodes.set(compNodeId, compNode);
           emitUpdate('node', compNode);
@@ -238,8 +246,14 @@ router.post('/expand', async (req, res) => {
 
         // ─── STEP 4: Fetch Trade Data from Comtrade ───
         emitStatus(`Fetching trade data for ${item.component}...`);
-        const partnerCountries = await comtradeService.getTopPartners(current.country, validHs);
-        if (!Array.isArray(partnerCountries) || partnerCountries.length === 0) continue;
+        let partnerCountries = [];
+        try {
+          partnerCountries = await comtradeService.getTopPartners(current.country, validHs);
+        } catch (err) {
+          console.error(`[TRACE] Comtrade service error for ${item.component}:`, err.message);
+        }
+        
+        if (!Array.isArray(partnerCountries)) partnerCountries = [];
 
         // ─── STEP 5: Resolve supplier entities in partner countries ───
         const keywords = item.keywords || getProfileKeywords(validHs);
@@ -251,7 +265,7 @@ router.post('/expand', async (req, res) => {
           if (!allNodes.has(locNodeId)) {
             const locNode = {
               id: locNodeId, type: 'Location', label: partnerCountry,
-              coords: COUNTRY_COORDS[partnerCountry] || [0,0]
+              coords: COUNTRY_COORDS[partnerCountry] || [20, 77]
             };
             allNodes.set(locNodeId, locNode);
             emitUpdate('node', locNode);
@@ -265,39 +279,43 @@ router.post('/expand', async (req, res) => {
 
           let matchedCompanies = [];
 
-          if (getIsConnected()) {
-            const session = getDriver().session();
-            try {
-              let keywordClauses = '';
-              if (keywords && keywords.length > 0) {
-                keywordClauses = 'AND (' + keywords.slice(0, 3).map((_, i) => `toLower(s.description) CONTAINS $kw${i}`).join(' OR ') + ')';
-              }
-              const params = { partnerCountry, currentName: current.name };
-              if (keywords) keywords.slice(0, 3).forEach((kw, i) => { params[`kw${i}`] = kw.toLowerCase(); });
+          try {
+            if (getIsConnected()) {
+              const session = getDriver().session();
+              try {
+                let keywordClauses = '';
+                if (Array.isArray(keywords) && keywords.length > 0) {
+                  keywordClauses = 'AND (' + keywords.slice(0, 3).map((_, i) => `toLower(s.description) CONTAINS $kw${i}`).join(' OR ') + ')';
+                }
+                const params = { partnerCountry, currentName: current.name };
+                if (Array.isArray(keywords)) keywords.slice(0, 3).forEach((kw, i) => { params[`kw${i}`] = kw.toLowerCase(); });
 
-              const result = await session.run(`
-                MATCH (s:Company)
-                WHERE toLower(s.country) = toLower($partnerCountry) AND s.name <> $currentName AND s.description IS NOT NULL ${keywordClauses}
-                RETURN s.name AS name, s.country AS country, s.description AS desc ORDER BY size(s.description) DESC LIMIT 2
-              `, params);
-              matchedCompanies = result.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '' }));
-              
+                const result = await session.run(`
+                  MATCH (s:Company)
+                  WHERE toLower(s.country) = toLower($partnerCountry) AND s.name <> $currentName AND s.description IS NOT NULL ${keywordClauses}
+                  RETURN s.name AS name, s.country AS country, s.description AS desc ORDER BY size(s.description) DESC LIMIT 2
+                `, params);
+                matchedCompanies = result.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '' }));
+                
+                if (matchedCompanies.length === 0) {
+                  const fbResult = await session.run(`
+                    MATCH (s:Company) WHERE toLower(s.country) = toLower($partnerCountry) AND s.name <> $currentName AND s.description IS NOT NULL AND size(s.description) > 5
+                    RETURN s.name AS name, s.country AS country, s.description AS desc LIMIT 1
+                  `, { partnerCountry, currentName: current.name });
+                  matchedCompanies = fbResult.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '' }));
+                }
+              } finally { await session.close(); }
+            } else {
+              // CSV Fallback
+              const csvCandidates = csvService.findCompaniesByCountryAndProfile(partnerCountry, keywords);
+              matchedCompanies = csvCandidates.filter(c => c.name !== current.name).slice(0, 2).map(c => ({ name: c.name, country: c.country, description: c.description }));
               if (matchedCompanies.length === 0) {
-                const fbResult = await session.run(`
-                  MATCH (s:Company) WHERE toLower(s.country) = toLower($partnerCountry) AND s.name <> $currentName AND s.description IS NOT NULL AND size(s.description) > 5
-                  RETURN s.name AS name, s.country AS country, s.description AS desc LIMIT 1
-                `, { partnerCountry, currentName: current.name });
-                matchedCompanies = fbResult.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '' }));
+                const anyInCountry = Array.from(csvService.companies.values()).filter(c => c.country && c.country.toLowerCase() === String(partnerCountry).toLowerCase() && c.name !== current.name).slice(0, 1);
+                matchedCompanies = anyInCountry.map(c => ({ name: c.name, country: c.country, description: csvService.getCompanyDescription(c.name) || '' }));
               }
-            } finally { await session.close(); }
-          } else {
-            // CSV Fallback
-            const csvCandidates = csvService.findCompaniesByCountryAndProfile(partnerCountry, keywords);
-            matchedCompanies = csvCandidates.filter(c => c.name !== current.name).slice(0, 2).map(c => ({ name: c.name, country: c.country, description: c.description }));
-            if (matchedCompanies.length === 0) {
-              const anyInCountry = Array.from(csvService.companies.values()).filter(c => c.country && c.country.toLowerCase() === String(partnerCountry).toLowerCase() && c.name !== current.name).slice(0, 1);
-              matchedCompanies = anyInCountry.map(c => ({ name: c.name, country: c.country, description: csvService.getCompanyDescription(c.name) || '' }));
             }
+          } catch (err) {
+            console.error(`[TRACE] Entity resolution error for ${partnerCountry}:`, err.message);
           }
 
           if (matchedCompanies.length === 0) {
@@ -328,10 +346,8 @@ router.post('/expand', async (req, res) => {
             allEdges.push({ ...supEdge, source: supEdge.from, target: supEdge.to, type: supEdge.relation });
             emitUpdate('edge', supEdge);
 
-            // Add logical direct edge for frontend ease (optional but requested structure usually likes it)
             const directEdge = { source: supplierId, target: `c_${current.name}`, type: 'SUPPLIES_DIRECT', component: item.component, hsn: validHs, tradeValue: partner.tradeValue };
             allEdges.push(directEdge);
-            // We don't necessarily need to emit this one if the UI builds it from the relation chain, but good for maps
 
             if (!visitedCompanies.has(matched.name)) {
               visitedCompanies.add(matched.name);
@@ -366,8 +382,8 @@ router.post('/expand', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('[TRACE] Error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('[TRACE] Fatal Error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
 

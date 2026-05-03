@@ -10,6 +10,7 @@ import GraphView from './components/GraphView';
 import MapView from './components/MapView';
 import DetailsPanel from './components/DetailsPanel';
 import AnalyticsModal from './components/AnalyticsModal';
+import InteractiveGlobe from './components/InteractiveGlobe';
 
 export default function App() {
   const [page, setPage] = useState('dashboard');
@@ -39,7 +40,11 @@ export default function App() {
 
   // ─── Socket.io Connection ───
   useEffect(() => {
-    const socket = io(window.location.origin.replace('5173', '3001')); // Adjust for dev port
+    const backendUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? `${window.location.protocol}//${window.location.hostname}:3001`
+      : window.location.origin;
+
+    const socket = io(backendUrl); 
     socketRef.current = socket;
 
     socket.on('connect', () => {
@@ -198,8 +203,8 @@ export default function App() {
         </>
       )}
       
-      {/* 🚀 MAIN SIDEBAR (Home Only) */}
-      {page === 'dashboard' && (
+      {/* 🚀 MAIN SIDEBAR (Home Only) - Hidden on cinematic dashboard */}
+      {page === 'dashboard' && false && (
         <aside className={`${sidebarCollapsed ? 'w-20' : 'w-64'} bg-white/30 backdrop-blur-md border-r border-white/40 flex flex-col shrink-0 z-50 transition-all duration-300 shadow-sm`}>
           <div className="p-6 flex flex-col h-full text-black">
             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'justify-between'} mb-8`}>
@@ -256,8 +261,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Global Control Bar */}
-        <header className={`h-16 flex items-center justify-between px-6 z-[60] shrink-0 ${page === 'dashboard' ? 'bg-white/30 backdrop-blur-md border-b border-white/40 shadow-sm' : 'pointer-events-none'}`}>
+        {/* Global Control Bar - Hidden on cinematic dashboard */}
+        <header className={`h-16 flex items-center justify-between px-6 z-[60] shrink-0 ${page === 'dashboard' ? 'hidden' : 'pointer-events-none'}`}>
           <div className="flex items-center gap-4 pointer-events-auto">
             {page === 'analytics' && (
               <button onClick={() => { setPage('dashboard'); setCompany(null); setHsn(null); setGraphData(null); }} className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-100 text-black rounded-lg transition-all font-bold text-sm border border-gray-200 shadow-sm">
@@ -281,7 +286,7 @@ export default function App() {
         {/* content Layer */}
         <div className={`flex-1 relative overflow-hidden ${page === 'dashboard' ? '' : 'pointer-events-none'}`}>
           {page === 'dashboard' ? (
-             <div className="h-full overflow-y-auto"><Dashboard stats={stats} onExplore={() => setPage('analytics')} onTrace={(c) => { setCompany(c); setPage('analytics'); setHsn(null); setGraphData(null); }} /></div>
+             <InteractiveGlobe onCompanySelect={(c) => { setCompany(c); setPage('analytics'); setHsn(null); setGraphData(null); }} />
           ) : (
             <div className="absolute inset-0 z-50 pointer-events-none">
               

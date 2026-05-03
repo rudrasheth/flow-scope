@@ -67,8 +67,10 @@ export default function MapView({ tradeRoutes = [], nodes = [] }) {
         {/* Trade Routes */}
         {validRoutes.map((route, i) => {
           const color = route.type === 'IMPORT' ? '#4DA3FF' : '#A78BFA';
+          const angle = Math.atan2(route.to[0] - route.from[0], route.to[1] - route.from[1]) * (180 / Math.PI);
+          
           return (
-            <div key={`route-group-${i}`}>
+            <React.Fragment key={`route-fragment-${i}`}>
               <Polyline 
                 positions={[route.from, route.to]}
                 pathOptions={{
@@ -80,7 +82,6 @@ export default function MapView({ tradeRoutes = [], nodes = [] }) {
                   className: 'animate-flow'
                 }}
               />
-              {/* Midpoint Label */}
               <Marker 
                 position={[(route.from[0] + route.to[0])/2, (route.from[1] + route.to[1])/2]} 
                 icon={L.divIcon({
@@ -91,18 +92,17 @@ export default function MapView({ tradeRoutes = [], nodes = [] }) {
                 })}
                 interactive={false}
               />
-              {/* Direction Arrow */}
               <Marker 
                 position={route.to}
                 icon={L.divIcon({
                   className: 'flow-arrow',
-                  html: `<div style="color: ${color}; transform: rotate(${Math.atan2(route.to[0]-route.from[0], route.to[1]-route.from[1])}rad); font-size: 14px; font-weight: 900; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">▶</div>`,
+                  html: `<div style="color: ${color}; transform: rotate(${angle}deg); font-size: 14px; font-weight: 900; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">▶</div>`,
                   iconSize: [16, 16],
                   iconAnchor: [8, 8]
                 })}
                 interactive={false}
               />
-            </div>
+            </React.Fragment>
           );
         })}
 

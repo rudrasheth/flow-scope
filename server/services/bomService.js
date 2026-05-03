@@ -73,23 +73,24 @@ class BomService {
 
     // Single attempt with quick fallback
     try {
-      const response = await this.ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt,
-        config: {
+      const model = this.ai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
           responseMimeType: "application/json",
           temperature: 0.2
         }
       });
 
-      const text = response.text;
-      const result = JSON.parse(text);
+      const response = await result.response;
+      const text = response.text();
+      const json = JSON.parse(text);
 
       // Reset quota flag on success
       this.quotaExhausted = false;
 
-      this.cache.set(cacheKey, result);
-      return result;
+      this.cache.set(cacheKey, json);
+      return json;
 
     } catch (error) {
       if (error.status === 429) {

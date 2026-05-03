@@ -43,8 +43,18 @@ app.use((req, res, next) => {
 // ─── API Routes ───
 app.use('/api/companies', companiesRouter);
 app.use('/api/graph', graphRouter);
-app.use('/api/trace', traceRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/trace', traceRouter);
+
+// ─── Global Error Handler ───
+app.use((err, req, res, next) => {
+  console.error('[Global Error]', err.stack);
+  res.status(500).json({ 
+    error: 'Internal Server Error', 
+    message: err.message,
+    path: req.path
+  });
+});
 
 app.get('/api/news', async (req, res) => {
   try {
