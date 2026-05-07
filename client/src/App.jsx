@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Cloud, Search as SearchIcon, ChevronLeft, ChevronRight, Info, Package, ArrowRightLeft, X, BarChart3, History, Clock } from 'lucide-react';
+import { LayoutDashboard, Cloud, Search as SearchIcon, ChevronLeft, ChevronRight, Info, Package, ArrowRightLeft, X, BarChart3, History, Clock, Route } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import SearchBar from './components/SearchBar';
 import HSNSelector from './components/HSNSelector';
@@ -11,6 +11,7 @@ import MapView from './components/MapView';
 import DetailsPanel from './components/DetailsPanel';
 import AnalyticsModal from './components/AnalyticsModal';
 import InteractiveGlobe from './components/InteractiveGlobe';
+import RouteOptimization from './components/RouteOptimization';
 
 export default function App() {
   const [page, setPage] = useState('dashboard');
@@ -264,9 +265,21 @@ export default function App() {
         {/* Global Control Bar - Hidden on cinematic dashboard */}
         <header className={`h-16 flex items-center justify-between px-6 z-[60] shrink-0 ${page === 'dashboard' ? 'hidden' : 'pointer-events-none'}`}>
           <div className="flex items-center gap-4 pointer-events-auto">
-            {page === 'analytics' && (
+            {(page === 'analytics' || page === 'route') && (
               <button onClick={() => { setPage('dashboard'); setCompany(null); setHsn(null); setGraphData(null); }} className="flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-100 text-black rounded-lg transition-all font-bold text-sm border border-gray-200 shadow-sm">
                 ← Exit
+              </button>
+            )}
+            {page === 'analytics' && company && graphData && (
+              <button onClick={() => setPage('route')} className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-lg transition-all font-bold text-xs uppercase tracking-wider shadow-lg shadow-violet-500/20 border border-violet-500/30">
+                <Route size={14} />
+                Route Optimizer
+              </button>
+            )}
+            {page === 'route' && (
+              <button onClick={() => setPage('analytics')} className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-100 text-black rounded-lg transition-all font-bold text-xs uppercase tracking-wider border border-gray-200 shadow-sm">
+                <Cloud size={14} />
+                Back to Analytics
               </button>
             )}
           </div>
@@ -459,6 +472,13 @@ export default function App() {
               )}
 
               {/* Map/Graph Switcher etc ends here */}
+            </div>
+          )}
+
+          {/* ─── ROUTE OPTIMIZATION PAGE ─── */}
+          {page === 'route' && (
+            <div className="absolute inset-0 z-50 pointer-events-auto">
+              <RouteOptimization company={company} graphData={graphData} />
             </div>
           )}
         </div>

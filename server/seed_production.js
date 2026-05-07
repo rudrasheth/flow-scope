@@ -4,7 +4,7 @@ const path = require('path');
 const csv = require('csv-parser');
 const neo4j = require('neo4j-driver');
 
-const COMPANIES_CSV = path.join(__dirname, '..', 'data', 'df_cleaned_data (1).csv');
+const COMPANIES_CSV = path.join(__dirname, '..', 'data', 'cleaned_companies_data.csv');
 const HS_CSV = path.join(__dirname, '..', 'data', 'merged_harmonized_sections.csv');
 
 async function seedProduction() {

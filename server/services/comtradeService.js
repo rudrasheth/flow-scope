@@ -149,7 +149,9 @@ class ComtradeService {
         });
 
         const records = response.data?.data || [];
-        if (records.length === 0) return [];
+        
+        // If records.length === 0, it will pass through, uniquePartners will be empty, 
+        // and top.length will be 0, triggering the proper fallback logic below!
 
         const valid = records.filter(t =>
           t.partnerCode !== 0 &&
