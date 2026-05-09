@@ -30,6 +30,16 @@ class CSVGraphService {
     this.countryCoords = new Map(); // country (lowercase) -> { lat, lng, companies: [] }
     this.edges = [];
     this.loaded = false;
+
+    // Smart path resolution for Local vs Vercel
+    this.basePath = process.cwd();
+    if (!fs.existsSync(path.join(this.basePath, 'server')) && fs.existsSync(path.join(this.basePath, 'data'))) {
+      // We are already inside the 'server' directory (Local)
+      this.dataPath = path.join(this.basePath, 'data');
+    } else {
+      // We are in the root directory (Vercel)
+      this.dataPath = path.join(this.basePath, 'server', 'data');
+    }
   }
 
   loadData() {
@@ -40,13 +50,16 @@ class CSVGraphService {
       this._loadGeoCompanies(),
     ]).then(() => {
       this.loaded = true;
-      console.log(`  ✓ CSV loaded: ${this.companies.size} companies, ${this.edges.length} trade links, ${this.descriptions.size} dossiers, ${this.hsTaxonomy.size} HS codes, ${this.geoCompanies.size} geocoded entities`);
+      console.log(`  ✓ Trade Data Loaded`);
+      console.log(`  ✓ HS Taxonomy Loaded`);
+      console.log(`  ✓ Enriched Data Loaded`);
+      console.log(`  ✓ CSV LOAD COMPLETE: ${this.companies.size} companies, ${this.edges.length} trade links, ${this.hsTaxonomy.size} HS codes, ${this.geoCompanies.size} enriched entities`);
     });
   }
 
   _loadTradeData() {
     return new Promise((resolve, reject) => {
-      const csvPath = path.join(process.cwd(), 'server', 'data', 'supply_chain_data.csv');
+      const csvPath = path.join(this.dataPath, 'supply_chain_data.csv');
       if (!fs.existsSync(csvPath)) {
         console.warn(`  ⚠ supply_chain_data.csv not found at ${csvPath}`);
         return resolve();
@@ -80,7 +93,7 @@ class CSVGraphService {
 
   _loadDescriptions() {
     return new Promise((resolve, reject) => {
-      const csvPath = path.join(process.cwd(), 'server', 'data', 'companies_with_bom_filters.csv');
+      const csvPath = path.join(this.dataPath, 'companies_with_bom_filters.csv');
       if (!fs.existsSync(csvPath)) {
         console.warn(`  ⚠ companies_with_bom_filters.csv not found at ${csvPath}`);
         return resolve();
@@ -112,7 +125,7 @@ class CSVGraphService {
    */
   _loadGeoCompanies() {
     return new Promise((resolve, reject) => {
-      const csvPath = path.join(process.cwd(), 'server', 'data', 'companies_with_bom_filters.csv');
+      const csvPath = path.join(this.dataPath, 'companies_with_bom_filters.csv');
       if (!fs.existsSync(csvPath)) {
         console.warn(`  ⚠ companies_with_bom_filters.csv not found at ${csvPath}`);
         return resolve();
@@ -233,7 +246,7 @@ class CSVGraphService {
 
   _loadHSTaxonomy() {
     return new Promise((resolve, reject) => {
-      const csvPath = path.join(process.cwd(), 'server', 'data', 'merged_harmonized_sections.csv');
+      const csvPath = path.join(this.dataPath, 'merged_harmonized_sections.csv');
       if (!fs.existsSync(csvPath)) {
         console.warn(`  ⚠ merged_harmonized_sections.csv not found at ${csvPath}`);
         return resolve();
