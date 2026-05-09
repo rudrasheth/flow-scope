@@ -36,13 +36,16 @@ class CSVGraphService {
     if (this.loadingPromise) return this.loadingPromise;
     
     this.loadingPromise = Promise.all([
-      this._loadTradeData(),
-      this._loadHSTaxonomy(),
-      this._loadEnrichedData(), // Consolidate loading of companies_with_bom_filters.csv
+      this._loadTradeData().then(() => console.log('  ✓ Trade Data Loaded')),
+      this._loadHSTaxonomy().then(() => console.log('  ✓ HS Taxonomy Loaded')),
+      this._loadEnrichedData().then(() => console.log('  ✓ Enriched Data Loaded')),
     ]).then(() => {
       this.loaded = true;
-      console.log(`  ✓ CSV loaded: ${this.companies.size} companies, ${this.edges.length} trade links, ${this.hsTaxonomy.size} HS codes, ${this.geoCompanies.size} enriched entities`);
+      console.log(`  ✓ CSV LOAD COMPLETE: ${this.companies.size} companies, ${this.edges.length} trade links, ${this.hsTaxonomy.size} HS codes, ${this.geoCompanies.size} enriched entities`);
       return true;
+    }).catch(err => {
+      console.error('  ✗ CSV LOAD FAILED:', err.message);
+      throw err;
     });
     
     return this.loadingPromise;
