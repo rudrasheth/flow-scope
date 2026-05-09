@@ -31,15 +31,15 @@ class CSVGraphService {
     this.edges = [];
     this.loaded = false;
 
-    // Smart path resolution for Local vs Vercel
-    this.basePath = process.cwd();
-    if (!fs.existsSync(path.join(this.basePath, 'server')) && fs.existsSync(path.join(this.basePath, 'data'))) {
-      // We are already inside the 'server' directory (Local)
-      this.dataPath = path.join(this.basePath, 'data');
-    } else {
-      // We are in the root directory (Vercel)
-      this.dataPath = path.join(this.basePath, 'server', 'data');
-    }
+    // Bulletproof Path Resolution for Local & Vercel
+    const possiblePaths = [
+      path.join(__dirname, '..', 'data'),               // Local: server/services/../data
+      path.join(process.cwd(), 'server', 'data'),       // Vercel Root: ./server/data
+      path.join(process.cwd(), 'data'),                 // Local Root or bundled: ./data
+    ];
+
+    this.dataPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+    console.log(`[CSV] Data Path Resolved: ${this.dataPath}`);
   }
 
   loadData() {
