@@ -92,40 +92,55 @@ io.on('connection', (socket) => {
   });
 });
 
-// ─── Start Server ───
-async function start() {
-  console.log('\n  ╔═══════════════════════════════════════╗');
-  console.log('  ║         F L O W S C O P E             ║');
-  console.log('  ║    Supply Chain Intelligence API       ║');
-  console.log('  ╚═══════════════════════════════════════╝\n');
+// Export the app for Vercel
+module.exports = app;
 
-  // Load CSV data (always — used as fallback and for stats)
-  try {
-    await csvService.loadData();
-  } catch (err) {
-    console.error('  ✗ Failed to load CSV data:', err.message);
-    process.exit(1);
-  }
+// ─── Start Server (Only when running locally) ───
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  async function start() {
+    console.log('\n  ╔═══════════════════════════════════════╗');
+    console.log('  ║         F L O W S C O P E             ║');
+    console.log('  ║    Supply Chain Intelligence API       ║');
+    console.log('  ╚═══════════════════════════════════════╝\n');
 
-  // Try Neo4j connection (optional)
-  await initDriver();
-
-  server.listen(PORT, () => {
-    console.log(`\n  ✓ Server running on http://localhost:${PORT}`);
-    console.log(`  ✓ WebSocket enabled and ready`);
-    console.log(`  ✓ API available at http://localhost:${PORT}/api\n`);
-  });
-
-  server.on('error', (err) => {
-    if (err && err.code === 'EADDRINUSE') {
-      console.error(`\n  ✗ Port ${PORT} is already in use. Another FlowScope server is running.`);
-      console.error(`  ✓ Reuse the existing server at http://localhost:${PORT} or stop the old process and restart.\n`);
-      process.exit(0);
+    // Load CSV data (always — used as fallback and for stats)
+    try {
+      await csvService.loadData();
+    } catch (err) {
+      console.error('  ✗ Failed to load CSV data:', err.message);
+      process.exit(1);
     }
 
-    console.error('[Server] Listen error:', err.message || err);
-    process.exit(1);
+    // Try Neo4j connection (optional)
+    await initDriver();
+
+    server.listen(PORT, () => {
+      console.log(`\n  ✓ Server running on http://localhost:${PORT}`);
+      console.log(`  ✓ WebSocket enabled and ready`);
+      console.log(`  ✓ API available at http://localhost:${PORT}/api\n`);
+    });
+
+    server.on('error', (err) => {
+      if (err && err.code === 'EADDRINUSE') {
+        console.error(`\n  ✗ Port ${PORT} is already in use. Another FlowScope server is running.`);
+        console.error(`  ✓ Reuse the existing server at http://localhost:${PORT} or stop the old process and restart.\n`);
+        process.exit(0);
+      }
+
+      console.error('[Server] Listen error:', err.message || err);
+      process.exit(1);
+    });
+  }
+
+  start();
+} else {
+  // In Vercel, we need to ensure data is loaded before processing requests
+  // Since we can't easily do top-level await in a way that works everywhere,
+  // we can use a middleware to ensure it's loaded.
+  app.use(async (req, res, next) => {
+    if (!csvService.loaded) {
+      await csvService.loadData();
+    }
+    next();
   });
 }
-
-start();
