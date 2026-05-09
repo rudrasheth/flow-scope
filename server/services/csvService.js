@@ -31,13 +31,12 @@ class CSVGraphService {
     this.edges = [];
     this.loaded = false;
 
-    // Bulletproof Path Resolution for Local & Vercel
+    // Bulletproof Path Resolution for Local, Vercel & Render
     const possiblePaths = [
-      path.join(process.cwd(), 'public', 'data'),        // Vercel Public Pattern: ./public/data
-      path.join(process.cwd(), 'api', 'data'),           // Vercel Direct: ./api/data
-      path.join(__dirname, '..', 'data'),               // Local: server/services/../data
-      path.join(process.cwd(), 'server', 'data'),       // Vercel Root: ./server/data
-      path.join(process.cwd(), 'data'),                 // Local Root or bundled: ./data
+      path.join(process.cwd(), 'server', 'data'),       // Project Root: ./server/data
+      path.join(process.cwd(), 'public', 'data'),       // Root Public: ./public/data
+      path.join(process.cwd(), 'data'),                 // Inside server folder: ./data
+      path.join(__dirname, '..', 'data'),               // Relative to script: ../data
     ];
 
     this.dataPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
