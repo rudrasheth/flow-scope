@@ -40,6 +40,12 @@ class CSVGraphService {
 
     this.dataPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
     console.log(`[CSV] Data Path Resolved: ${this.dataPath}`);
+    try {
+      const files = fs.readdirSync(this.dataPath);
+      console.log(`[CSV] Available files in data path: ${files.join(', ')}`);
+    } catch (err) {
+      console.warn(`[CSV] Failed to list files in ${this.dataPath}: ${err.message}`);
+    }
   }
 
   loadData() {

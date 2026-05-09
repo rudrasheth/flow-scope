@@ -7,7 +7,11 @@
     "api/index.js": {
       "memory": 2048,
       "maxDuration": 300,
-      "includeFiles": "server/data/**"
+      "includeFiles": [
+        "server/data/supply_chain_data.csv",
+        "server/data/companies_with_bom_filters.csv",
+        "server/data/merged_harmonized_sections.csv"
+      ]
     }
   },
   "rewrites": [
