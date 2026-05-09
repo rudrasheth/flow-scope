@@ -33,16 +33,42 @@ router.get('/traverse', async (req, res) => {
   }
 });
 
-/**
- * GET /api/graph/stats
- * Get overall dataset statistics.
- */
 router.get('/stats', (req, res) => {
   try {
     const stats = csvService.getStats() || { totalCompanies: 0, totalTradeLinks: 0 };
     res.json({ stats });
   } catch (err) {
     res.json({ stats: { totalCompanies: 0, totalTradeLinks: 0 } });
+  }
+});
+
+router.get('/debug/files', (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    function getFiles(dir, depth = 0) {
+      if (depth > 3) return [];
+      const files = fs.readdirSync(dir);
+      let results = [];
+      for (const file of files) {
+        const fullPath = path.join(dir, file);
+        if (fs.statSync(fullPath).isDirectory()) {
+          results.push({ name: file, type: 'dir', children: getFiles(fullPath, depth + 1) });
+        } else {
+          results.push({ name: file, type: 'file', size: fs.statSync(fullPath).size });
+        }
+      }
+      return results;
+    }
+
+    res.json({
+      cwd: process.cwd(),
+      dirname: __dirname,
+      tree: getFiles(process.cwd())
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
