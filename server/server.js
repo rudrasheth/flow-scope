@@ -41,6 +41,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// ─── HEALTH & DIAGNOSTICS ───
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    loaded: csvService.loaded,
+    stats: {
+      companies: csvService.companies.size,
+      descriptions: csvService.descriptions.size,
+      geoCompanies: csvService.geoCompanies.size,
+      hsTaxonomy: csvService.hsTaxonomy.size,
+      edges: csvService.edges.length,
+      countryCoords: csvService.countryCoords.size
+    }
+  });
+});
+
 // ─── API Routes ───
 app.use('/api/companies', companiesRouter);
 app.use('/api/graph', graphRouter);

@@ -516,7 +516,7 @@ class CSVGraphService {
       if (e.exportCountry) countries.add(e.exportCountry);
     }
     return {
-      totalCompanies: this.companies.size,
+      totalCompanies: Math.max(this.companies.size, this.geoCompanies.size, this.descriptions.size),
       totalTradeLinks: this.edges.length,
       totalCountries: countries.size,
       totalDescriptions: this.descriptions.size,
