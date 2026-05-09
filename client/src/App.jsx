@@ -45,6 +45,7 @@ export default function App() {
       ? `${window.location.protocol}//${window.location.hostname}:3001`
       : window.location.origin;
 
+    axios.defaults.baseURL = backendUrl;
     const socket = io(backendUrl); 
     socketRef.current = socket;
 
