@@ -46,7 +46,7 @@ class CSVGraphService {
 
   _loadTradeData() {
     return new Promise((resolve, reject) => {
-      const csvPath = path.join(__dirname, '..', 'data', 'supply_chain_data.csv');
+      const csvPath = path.join(process.cwd(), 'server', 'data', 'supply_chain_data.csv');
       if (!fs.existsSync(csvPath)) {
         console.warn(`  ⚠ supply_chain_data.csv not found at ${csvPath}`);
         return resolve();
@@ -80,7 +80,7 @@ class CSVGraphService {
 
   _loadDescriptions() {
     return new Promise((resolve, reject) => {
-      const csvPath = path.join(__dirname, '..', 'data', 'companies_with_bom_filters.csv');
+      const csvPath = path.join(process.cwd(), 'server', 'data', 'companies_with_bom_filters.csv');
       if (!fs.existsSync(csvPath)) {
         console.warn(`  ⚠ companies_with_bom_filters.csv not found at ${csvPath}`);
         return resolve();
@@ -112,7 +112,7 @@ class CSVGraphService {
    */
   _loadGeoCompanies() {
     return new Promise((resolve, reject) => {
-      const csvPath = path.join(__dirname, '..', 'data', 'companies_with_bom_filters.csv');
+      const csvPath = path.join(process.cwd(), 'server', 'data', 'companies_with_bom_filters.csv');
       if (!fs.existsSync(csvPath)) {
         console.warn(`  ⚠ companies_with_bom_filters.csv not found at ${csvPath}`);
         return resolve();
@@ -233,7 +233,7 @@ class CSVGraphService {
 
   _loadHSTaxonomy() {
     return new Promise((resolve, reject) => {
-      const csvPath = path.join(__dirname, '..', 'data', 'merged_harmonized_sections.csv');
+      const csvPath = path.join(process.cwd(), 'server', 'data', 'merged_harmonized_sections.csv');
       if (!fs.existsSync(csvPath)) {
         console.warn(`  ⚠ merged_harmonized_sections.csv not found at ${csvPath}`);
         return resolve();
