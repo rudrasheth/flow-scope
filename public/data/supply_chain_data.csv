@@ -1,0 +1,187 @@
+buyer_name,supplier_name,hsn_code,product_description,import_country,export_country,trade_date,quantity
+Adani Ports,Larsen & Toubro,8431,Port crane components,India,India,2024-01-10,320
+Adani Ports,Cargotec Corp,8426,Ship-to-shore cranes,India,Finland,2024-02-15,18
+Adani Ports,ABB Ltd,8537,Electrical switchgear panels,India,Switzerland,2024-03-20,95
+Adani Ports,JSW Steel,7308,Steel structural fabrication,India,India,2024-04-05,1800
+Adani Ports,Siemens AG,8504,Power transformers industrial,India,Germany,2024-01-28,42
+Reliance Industries,Honeywell Intl,8543,Refinery process control units,India,United States,2024-02-10,76
+Reliance Industries,Emerson Electric,8481,Industrial control valves,India,United States,2024-03-15,420
+Reliance Industries,Axens SA,3817,Petroleum catalyst compounds,India,France,2024-01-22,850
+Reliance Industries,KBR Inc,8419,Process heat exchanger units,India,United States,2024-04-08,34
+Reliance Industries,Flowserve Corp,8413,High-pressure process pumps,India,United States,2024-02-28,210
+Tata Steel,ArcelorMittal,7205,Iron ore pellet feed,India,Luxembourg,2024-01-14,45000
+Tata Steel,NMDC Ltd,2601,Iron ore concentrate fines,India,India,2024-02-20,92000
+Tata Steel,Coal India,2701,Metallurgical coking coal,India,India,2024-03-08,38000
+Tata Steel,Praxair Inc,2804,Industrial oxygen gas supply,India,United States,2024-04-12,15000
+Tata Steel,Danieli Spa,8455,Steel rolling mill equipment,India,Italy,2024-01-30,12
+Mahindra & Mahindra,Bosch India,8708,Diesel fuel injection systems,India,Germany,2024-02-05,28000
+Mahindra & Mahindra,Minda Corp,8512,Automotive lighting assemblies,India,India,2024-03-18,42000
+Mahindra & Mahindra,Bharat Forge,8483,Crankshaft forged steel parts,India,India,2024-01-25,18500
+Mahindra & Mahindra,ZF Friedrichshafen,8708,Transmission gearbox systems,India,Germany,2024-04-15,9200
+Mahindra & Mahindra,WABCO Holdings,8708,ABS brake control modules,India,United States,2024-02-22,16000
+Wipro Ltd,Taiwan Semiconductor,8542,Application processor chips,India,Taiwan,2024-01-08,250000
+Wipro Ltd,Celestica Inc,8471,Server motherboard assemblies,India,Canada,2024-02-14,8500
+Wipro Ltd,Arrow Electronics,8542,Electronic component kits,India,United States,2024-03-25,42000
+Haier Group,LG Electronics,8528,OLED television panels,China,South Korea,2024-01-18,350000
+Haier Group,Shinhan Electric,8419,Refrigeration compressor units,China,South Korea,2024-02-25,180000
+Haier Group,Nidec Corp,8501,BLDC motor assemblies,China,Japan,2024-03-10,250000
+Haier Group,STMicroelectronics,8542,Power management IC chips,China,Switzerland,2024-04-02,1200000
+Midea Group,Welling Motor,8501,AC induction motor units,China,China,2024-01-22,300000
+Midea Group,Highly Electric,8414,Rotary compressor elements,China,China,2024-02-15,220000
+Midea Group,Honeywell Intl,8543,Smart home control modules,China,United States,2024-03-28,85000
+BYD Company,Ganfeng Lithium,2836,Lithium iron phosphate,China,China,2024-01-05,35000
+BYD Company,Contemporary Amperex,8507,Battery cell procurement,China,China,2024-02-10,48000
+BYD Company,Shenzhen Inovance,8537,Motor drive controllers,China,China,2024-03-15,22000
+BYD Company,Sensata Technologies,8543,Battery management sensors,China,United States,2024-04-08,95000
+Volkswagen AG,Continental AG,8708,Electronic stability systems,Germany,Germany,2024-02-08,55000
+Volkswagen AG,Webasto SE,8708,Panoramic roof assemblies,Germany,Germany,2024-03-20,28000
+Volkswagen AG,Thyssenkrupp,7209,Cold-rolled automotive steel,Germany,Germany,2024-01-12,120000
+Volkswagen AG,Saint-Gobain,7007,Automotive safety glass,Germany,France,2024-04-18,65000
+Volkswagen AG,ElringKlinger,8484,Engine sealing systems,Germany,Germany,2024-02-28,42000
+Hyundai Motor,Hyosung Corp,5402,High-tenacity polyester yarn,South Korea,South Korea,2024-01-16,8500
+Hyundai Motor,Hankook Tyre,4011,Passenger car radial tyres,South Korea,South Korea,2024-02-22,180000
+Hyundai Motor,Mobis,8708,Front module assemblies,South Korea,South Korea,2024-03-05,52000
+Hyundai Motor,HL Mando,8708,Rack-and-pinion steering,South Korea,South Korea,2024-01-30,38000
+Renault SA,Valeo SA,8512,Adaptive headlamp systems,France,France,2024-02-12,33000
+Renault SA,Plastic Omnium,8708,Bumper fascia systems,France,France,2024-03-22,48000
+Renault SA,Faurecia,8708,Exhaust emission systems,France,France,2024-01-08,29000
+Renault SA,Magneti Marelli,8543,Engine control unit modules,France,Italy,2024-04-10,21000
+Nestlé SA,Olam International,1801,Raw cocoa bean supply,Switzerland,Ivory Coast,2024-01-14,9500
+Nestlé SA,Barry Callebaut,1806,Bulk chocolate mass,Switzerland,Belgium,2024-02-18,12000
+Nestlé SA,Givaudan SA,3302,Food flavoring compounds,Switzerland,Switzerland,2024-03-25,3200
+Nestlé SA,Tetra Pak,3923,Aseptic packaging systems,Switzerland,Sweden,2024-04-06,850000
+Unilever PLC,Wilmar Intl,1511,Refined palm olein oil,United Kingdom,Singapore,2024-01-20,28000
+Unilever PLC,Croda Intl,3401,Surfactant soap base,United Kingdom,United Kingdom,2024-02-25,4500
+Unilever PLC,IFF Inc,3302,Perfume fragrance compounds,United Kingdom,United States,2024-03-12,2800
+Unilever PLC,Huhtamaki,3923,Flexible packaging laminates,United Kingdom,Finland,2024-04-14,1200000
+Procter & Gamble,Celanese Corp,3904,Specialty polymer resins,United States,United States,2024-02-06,18000
+Procter & Gamble,Georgia-Pacific,4818,Nonwoven tissue substrate,United States,United States,2024-03-14,250000
+Procter & Gamble,BASF SE,3402,Anionic surfactant blend,United States,Germany,2024-01-24,8500
+Procter & Gamble,Takasago Intl,3302,Aroma chemical compounds,United States,Japan,2024-04-20,1900
+Johnson & Johnson,Lonza Group,2941,Active pharmaceutical ingredients,United States,Switzerland,2024-01-10,1200
+Johnson & Johnson,West Pharma,9018,Drug delivery container systems,United States,United States,2024-02-15,850000
+Johnson & Johnson,Gerresheimer,7010,Glass pharmaceutical vials,United States,Germany,2024-03-20,1500000
+Johnson & Johnson,Avanir Pharma,2941,Specialty drug synthesis,United States,United States,2024-04-05,650
+Pfizer Inc,Divi's Laboratories,2941,API bulk drug supply,United States,India,2024-02-08,2400
+Pfizer Inc,Schott AG,7010,Vial glass containers pharma,United States,Germany,2024-03-16,2000000
+Pfizer Inc,Siegfried AG,2941,Contract drug manufacturing,United States,Switzerland,2024-01-22,980
+Pfizer Inc,Samsung Biologics,2941,Biologics contract fill,United States,South Korea,2024-04-12,560
+HDFC Bank,Infosys Ltd,8471,Core banking software systems,India,India,2024-01-15,240
+HDFC Bank,IBM India,8471,Mainframe hardware systems,India,United States,2024-02-20,18
+HDFC Bank,NCR Corp,8472,ATM cash dispenser units,India,United States,2024-03-10,2800
+ICICI Bank,Wipro Ltd,8471,Digital banking platform,India,India,2024-01-28,185
+ICICI Bank,Diebold Nixdorf,8472,Branch automation kiosks,India,United States,2024-02-14,1200
+ICICI Bank,Temenos AG,8471,Banking software licences,India,Switzerland,2024-03-30,42
+Divi's Laboratories,Jubilant Life,2941,Intermediary chemical API,India,India,2024-02-05,1800
+Divi's Laboratories,Lanxess AG,2904,Specialty solvent chemicals,India,Germany,2024-03-18,2400
+Divi's Laboratories,Merck KGaA,2941,Research-grade reagents,India,Germany,2024-04-10,380
+Sun Pharma,Divis Laboratories,2941,API bulk pharmaceutical,India,India,2024-01-20,3200
+Sun Pharma,Borregaard AS,3812,Cellulose pharma excipient,India,Norway,2024-02-28,850
+Sun Pharma,Evonik Ind,2841,Specialty pharma excipients,India,Germany,2024-04-02,1200
+Wistron Corp,Foxconn,8471,Notebook ODM assemblies,Taiwan,Taiwan,2024-01-12,1200000
+Wistron Corp,Compal Electronics,8471,Computer sub-assemblies,Taiwan,Taiwan,2024-02-18,850000
+Wistron Corp,Pegatron Corp,8471,Electronics manufacturing,Taiwan,Taiwan,2024-03-22,650000
+Foxconn,AUO Corp,9013,LCD display panels 15in,Taiwan,Taiwan,2024-01-08,2500000
+Foxconn,Zhen Ding Tech,8534,Flexible printed circuits,Taiwan,Taiwan,2024-02-12,8000000
+Foxconn,Yageo Corp,8532,SMD resistor capacitor,Taiwan,Taiwan,2024-03-28,15000000
+Pegatron Corp,Catcher Tech,7616,Aluminum alloy chassis,Taiwan,Taiwan,2024-01-25,1800000
+Pegatron Corp,Kinsus Corp,8534,Flip-chip substrate PCB,Taiwan,Taiwan,2024-03-05,3200000
+Xiaomi Corp,CEVA Inc,8542,Wireless communication chips,China,United States,2024-02-05,850000
+Xiaomi Corp,OFilm Tech,9001,Camera module assemblies,China,China,2024-03-12,2200000
+Xiaomi Corp,Sunny Optical,9001,Lens optical assembly,China,China,2024-04-08,1800000
+Oppo Electronics,MediaTek Inc,8542,Dimensity SoC chipsets,China,Taiwan,2024-01-18,3500000
+Oppo Electronics,Largan Precision,9001,High-resolution camera lens,China,Taiwan,2024-02-22,1200000
+Oppo Electronics,Murata Mfg,8532,MLCC component supply,China,Japan,2024-03-30,12000000
+ABB Ltd,Hitachi Energy,8504,High-voltage transformers,Switzerland,Japan,2024-01-14,85
+ABB Ltd,Rexnord Corp,8483,Industrial gear drives,Switzerland,United States,2024-02-20,620
+ABB Ltd,Baldor Electric,8501,Industrial motor drives,Switzerland,United States,2024-03-25,1400
+Siemens AG,Osram GmbH,8539,LED industrial luminaires,Germany,Germany,2024-01-06,185000
+Siemens AG,TE Connectivity,8536,Precision connector array,Germany,Switzerland,2024-02-14,850000
+Siemens AG,Wago GmbH,8536,Terminal block systems,Germany,Germany,2024-03-20,420000
+ArcelorMittal,Vale SA,2601,Iron ore pellets BRBF,Luxembourg,Brazil,2024-01-10,850000
+ArcelorMittal,BHP Group,2701,Hard coking coal supply,Luxembourg,Australia,2024-02-16,320000
+ArcelorMittal,Linde PLC,2804,Oxygen nitrogen industrial,Luxembourg,Ireland,2024-03-22,15000
+Vale SA,Glencore,2603,Nickel sulphide concentrate,Brazil,Switzerland,2024-01-18,28000
+Vale SA,Ferroglobe,2202,Silica feedstock manganese,Brazil,United Kingdom,2024-02-24,15000
+BHP Group,Wesfarmers,2701,Coal mining equipment parts,Australia,Australia,2024-03-15,8500
+BHP Group,Orica Ltd,3602,Mining explosives ANFO,Australia,Australia,2024-04-20,95000
+Rio Tinto,Caterpillar Inc,8429,Mining haul truck parts,Australia,United States,2024-01-22,420
+Rio Tinto,Komatsu Ltd,8429,Ultra-class dump trucks,Australia,Japan,2024-02-28,35
+DHL Supply Chain,Jungheinrich,8427,Electric forklift truck,Germany,Germany,2024-03-08,850
+DHL Supply Chain,Swisslog,8428,Automated storage system,Germany,Switzerland,2024-04-12,12
+DHL Supply Chain,Zebra Tech,8471,Warehouse barcode scanners,Germany,United States,2024-01-30,4500
+Maersk Line,MAN Energy,8408,Marine two-stroke engines,Denmark,Germany,2024-02-05,8
+Maersk Line,Wartsila Corp,8408,Auxiliary marine engines,Denmark,Finland,2024-03-18,22
+Maersk Line,Kongsberg Maritime,8526,Vessel navigation systems,Denmark,Norway,2024-04-15,35
+POSCO Holdings,Nippon Steel,7202,Specialty alloy additions,South Korea,Japan,2024-01-08,18500
+POSCO Holdings,Air Products,2804,High-purity hydrogen gas,South Korea,United States,2024-02-12,8500
+POSCO Holdings,SMS Group,8455,Continuous caster equipment,South Korea,Germany,2024-03-20,6
+LG Electronics,Winia Mando,8418,Refrigerator compressor parts,South Korea,South Korea,2024-01-15,220000
+LG Electronics,Toray Ind,5402,Carbon fiber reinforced sheet,South Korea,Japan,2024-02-22,8500
+LG Electronics,Corning Inc,7007,OLED glass substrate supply,South Korea,United States,2024-03-28,350000
+Samsung SDI,Umicore,8106,NMC cathode precursor,South Korea,Belgium,2024-01-20,9500
+Samsung SDI,Shanshan Corp,2804,Natural graphite anode,South Korea,China,2024-02-26,12000
+Samsung SDI,Solvay SA,2827,PVDF binder material,South Korea,Belgium,2024-04-04,3800
+TSMC,Applied Materials,8486,CVD deposition equipment,Taiwan,United States,2024-01-10,42
+TSMC,Tokyo Electron,8486,Etch process equipment,Taiwan,Japan,2024-02-16,28
+TSMC,Air Liquide,2804,Ultra-pure gas supply,Taiwan,France,2024-03-22,8500
+Ganfeng Lithium,Pilbara Minerals,2603,Spodumene lithium ore,China,Australia,2024-01-12,85000
+Ganfeng Lithium,Sigma Lithium,2836,Lithium hydroxide monohydrate,China,Brazil,2024-02-18,12000
+Glencore,Katanga Mining,2605,Cobalt hydroxide cake,Switzerland,Congo,2024-03-10,8500
+Glencore,Volcan Cia Minera,2608,Zinc lead concentrate,Switzerland,Peru,2024-04-15,22000
+BASF SE,Lyondell Basell,2901,Ethylene polymer feedstock,Germany,Netherlands,2024-01-24,48000
+BASF SE,Evonik Ind,2921,Specialty amine chemicals,Germany,Germany,2024-02-28,12000
+BASF SE,Sabic,2901,Propylene chemical base,Germany,Saudi Arabia,2024-03-18,35000
+Covestro AG,Huntsman Corp,2929,MDI isocyanate chemical,Germany,United States,2024-01-16,18000
+Covestro AG,INEOS Group,2712,Chlorine chemical supply,Germany,United Kingdom,2024-02-22,8500
+Umicore,Freeport McMoRan,2603,Copper anode scrap,Belgium,United States,2024-03-14,15000
+Umicore,Aurubis AG,2603,Secondary copper refinery,Belgium,Germany,2024-04-18,22000
+Furukawa Electric,Sumitomo Corp,7408,Electrolytic copper rod,Japan,Japan,2024-01-18,35000
+Furukawa Electric,Mitsui Mining,2617,Copper ore concentrate,Japan,Japan,2024-02-24,18000
+Shin-Etsu Chemical,Wacker Chemie,2804,Semiconductor silicon,Japan,Germany,2024-03-20,8500
+Shin-Etsu Chemical,Momentive,2835,Silica fume chemical,Japan,United States,2024-04-10,12000
+Larsen & Toubro,BHEL,8502,Power plant generators,India,India,2024-01-20,24
+Larsen & Toubro,Thermax Ltd,8419,Industrial heat recovery,India,India,2024-02-26,85
+Larsen & Toubro,Cummins India,8408,Diesel generator sets,India,United States,2024-03-15,420
+Bharat Forge,Sandvik AB,8207,Forging die tooling sets,India,Sweden,2024-01-26,350
+Bharat Forge,Outotec,8419,Sintering plant equipment,India,Finland,2024-03-02,8
+NMDC Ltd,Atlas Copco,8430,Drill rock boring rigs,India,Sweden,2024-02-08,42
+NMDC Ltd,Howden Group,8414,Mining ventilation fans,India,United Kingdom,2024-03-25,85
+JSW Steel,Paul Wurth,8454,Blast furnace equipment,India,Luxembourg,2024-01-15,4
+JSW Steel,Primetals Tech,8455,Slab caster equipment,India,Japan,2024-02-20,3
+Olam International,Syngenta AG,3808,Agricultural input seeds,Singapore,Switzerland,2024-01-22,8500
+Olam International,Yara Intl,3102,Nitrogen fertilizer CAN,Singapore,Norway,2024-02-28,45000
+Barry Callebaut,Cargill,1801,Fermented cocoa beans,Belgium,Ivory Coast,2024-03-12,18000
+Barry Callebaut,ADM,1507,Refined cocoa butter fat,Belgium,United States,2024-04-08,5500
+Givaudan SA,Firmenich,3302,Aroma ingredient blend,Switzerland,Switzerland,2024-01-28,850
+Givaudan SA,Symrise AG,3302,Natural extract compounds,Switzerland,Germany,2024-02-18,1200
+Wilmar Intl,IOI Group,1511,Crude palm kernel oil,Singapore,Malaysia,2024-03-05,65000
+Wilmar Intl,Sime Darby,1511,Refined bleached palm oil,Singapore,Malaysia,2024-04-12,48000
+Celanese Corp,Eastman Chemical,2905,Acetic acid glacial pure,United States,United States,2024-01-10,28000
+Celanese Corp,LyondellBasell,2901,Ethylene vinyl acetate,United States,Netherlands,2024-02-15,18000
+Air Products,Linde PLC,8419,Cryogenic process equipment,United States,Ireland,2024-03-20,12
+Air Products,Chart Industries,8419,LNG heat exchanger unit,United States,United States,2024-04-15,28
+Linde PLC,Chemours Co,2812,Fluorochemical precursor,Ireland,United States,2024-02-10,4500
+Samsung Biologics,Lonza Group,2941,Cell culture bioreactor,South Korea,Switzerland,2024-03-05,8
+Samsung Biologics,Eppendorf AG,3821,Laboratory consumables bio,South Korea,Germany,2024-04-10,85000
+Valeo SA,Sumitomo Elec,8544,Automotive wire harness,France,Japan,2024-01-25,38000
+Valeo SA,Aluminum Corp China,7601,Wrought aluminum coils,France,China,2024-02-28,18000
+Faurecia,Treves Group,5513,Textile seat trim fabric,France,France,2024-03-18,350000
+Faurecia,Novelis Inc,7606,Aluminum sheet alloys,France,United States,2024-04-20,12000
+Kongsberg Maritime,Rolls-Royce Marine,8412,Marine propulsion thrusters,Norway,United Kingdom,2024-01-20,42
+Kongsberg Maritime,Wärtsila Corp,8526,Dynamic positioning systems,Norway,Finland,2024-02-25,18
+Wartsila Corp,SKF Group,8482,High-load marine bearings,Finland,Sweden,2024-03-10,12000
+Wartsila Corp,Parker Hannifin,8481,Hydraulic valve systems,Finland,United States,2024-04-15,8500
+SKF Group,Ovako AB,7228,Bearing quality steel bar,Sweden,Sweden,2024-01-15,18000
+SKF Group,Sandvik AB,8207,Precision grinding wheels,Sweden,Sweden,2024-02-20,4500
+Sandvik AB,Kennametal,8207,Cemented carbide inserts,Sweden,United States,2024-03-25,28000
+Atlas Copco,Oerlikon Corp,8414,Vacuum pump systems,Sweden,Switzerland,2024-04-05,350
+Atlas Copco,Trelleborg AB,4016,Industrial sealing rings,Sweden,Sweden,2024-02-05,85000
+Caterpillar Inc,Sun Chemical,3212,Industrial paint coatings,United States,United States,2024-01-22,12000
+Caterpillar Inc,Timken Co,8482,Tapered roller bearings,United States,United States,2024-03-08,85000
+Komatsu Ltd,Nippon Steel,7216,Wide-flange structural beam,Japan,Japan,2024-02-12,28000
+Komatsu Ltd,NOK Corp,4016,Oil seal gasket sets,Japan,Japan,2024-03-22,350000
+Honeywell Intl,Sensata Tech,8543,Industrial pressure sensors,United States,United States,2024-01-28,185000
+Honeywell Intl,Ametek Inc,9026,Flow measuring instruments,United States,United States,2024-02-28,42000
+Applied Materials,Entegris Inc,8486,High-purity process parts,United States,United States,2024-03-15,85000
+Applied Materials,Mattson Tech,8486,Thermal processing systems,United States,United States,2024-04-18,18

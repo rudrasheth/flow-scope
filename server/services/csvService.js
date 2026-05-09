@@ -33,6 +33,7 @@ class CSVGraphService {
 
     // Bulletproof Path Resolution for Local & Vercel
     const possiblePaths = [
+      path.join(process.cwd(), 'public', 'data'),        // Vercel Public Pattern: ./public/data
       path.join(process.cwd(), 'api', 'data'),           // Vercel Direct: ./api/data
       path.join(__dirname, '..', 'data'),               // Local: server/services/../data
       path.join(process.cwd(), 'server', 'data'),       // Vercel Root: ./server/data
