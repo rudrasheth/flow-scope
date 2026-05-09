@@ -106,11 +106,7 @@ export default function InteractiveGlobe({ onCompanySelect }) {
     setOpen(true); // Open immediately to show "Searching..." or "No results"
 
     try {
-      const backendUrl = import.meta.env.VITE_API_URL || (
-        window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-          ? `${window.location.protocol}//${window.location.hostname}:3001`
-          : window.location.origin
-      );
+      const backendUrl = import.meta.env.VITE_API_URL || 'https://flowscope-uaaf.onrender.com';
 
       const { data } = await axios.get(`${backendUrl}/api/companies/search?q=${encodeURIComponent(q)}`);
       setSuggestions(data.companies || []);

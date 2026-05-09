@@ -16,8 +16,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // Adjust this in production
-    methods: ["GET", "POST"]
+    origin: ["https://flow-scope-client.vercel.app", "http://localhost:5173", "http://localhost:3000"],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
@@ -32,7 +33,10 @@ process.on('uncaughtException', (err) => {
 });
 
 // ─── Middleware ───
-app.use(cors());
+app.use(cors({
+  origin: ["https://flow-scope-client.vercel.app", "http://localhost:5173", "http://localhost:3000"],
+  credentials: true
+}));
 app.use(express.json());
 
 // Attach io to request
