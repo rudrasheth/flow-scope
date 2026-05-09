@@ -102,7 +102,10 @@ class CSVGraphService {
       fs.createReadStream(csvPath)
         .pipe(csv())
         .on('data', (row) => {
-          const name = row.company_name?.trim();
+          let name = row.company_name?.trim();
+          if (name) {
+            name = name.replace(/[\n\r\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+          }
           const desc = row.wikidata_description?.trim();
           const city = row.wikidata_hq?.trim();
           const country = normalizeCountry(row.country);
@@ -134,7 +137,12 @@ class CSVGraphService {
       fs.createReadStream(csvPath)
         .pipe(csv())
         .on('data', (row) => {
-          const name = row.company_name?.trim();
+          let name = row.company_name?.trim();
+          if (name) {
+            // Clean out hidden newlines/tabs that might be in the raw CSV
+            name = name.replace(/[\n\r\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+          }
+          
           const lat = parseFloat(row.latitude);
           const lng = parseFloat(row.longitude);
           const country = normalizeCountry(row.country);
