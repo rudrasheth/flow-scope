@@ -85,10 +85,21 @@ const CITY_COORDS = {
 };
 
 function getCoords(country, city) {
-  if (city && CITY_COORDS[city]) return CITY_COORDS[city];
+  // 1. Try Dataset-driven smart coordinates (confidence >= 7 or country average)
+  const smartGeo = csvService.getCountryGeo(country);
+  if (smartGeo) {
+    if (smartGeo.isExactCompanyAnchor) {
+      return [smartGeo.lat, smartGeo.lng]; // Precision anchor - NO jitter
+    }
+    // Fallback: Jitter the country average so nodes don't overlap perfectly
+    return [
+      smartGeo.lat + (Math.random() - 0.5) * 1.5,
+      smartGeo.lng + (Math.random() - 0.5) * 1.5
+    ];
+  }
   
+  // 2. Local fallback if country not in dataset
   const base = COUNTRY_COORDS[country] || [20, 77];
-  // Jitter slightly so nodes don't overlap perfectly if city is unknown
   return [base[0] + (Math.random() - 0.5) * 2, base[1] + (Math.random() - 0.5) * 2];
 }
 

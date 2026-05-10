@@ -27,7 +27,8 @@ class CSVGraphService {
     this.descriptions = new Map(); // company_name (lowercase) -> wikidata_description
     this.hsTaxonomy = new Map();   // hscode -> { section, section_name, description, level }
     this.geoCompanies = new Map(); // company_name (lowercase) -> { name, country, lat, lng, city, description }
-    this.countryCoords = new Map(); // country (lowercase) -> { lat, lng, companies: [] }
+    this.countryCoords = new Map(); // country (lowercase) -> stats
+    this.industryCoords = new Map(); // country|industry (lowercase) -> { lat, lng, count, coords: [] }
     this.edges = [];
     this.loaded = false;
 
@@ -180,19 +181,44 @@ class CSVGraphService {
               name, country, lat, lng, city, description: desc, confidence, industry, standardizedIndustry, bomFilter
             });
 
-            // Aggregate country-level coordinates (average of all companies in that country)
+            // Aggregate country-level coordinates
             const countryKey = country.toLowerCase();
             if (!this.countryCoords.has(countryKey)) {
-              this.countryCoords.set(countryKey, { lat: 0, lng: 0, count: 0, companies: [], companyCoords: [], country });
+              this.countryCoords.set(countryKey, { 
+                lat: 0, lng: 0, count: 0, 
+                companies: [], companyCoords: [], 
+                country,
+                bestCoord: { lat, lng, confidence } // Initialize with first company
+              });
             }
             const entry = this.countryCoords.get(countryKey);
             entry.lat = ((entry.lat * entry.count) + lat) / (entry.count + 1);
             entry.lng = ((entry.lng * entry.count) + lng) / (entry.count + 1);
             entry.count += 1;
             
+            // Update best anchor: if new company has higher confidence, OR if current is low and this is >= 7
+            if (confidence > entry.bestCoord.confidence || (entry.bestCoord.confidence < 7 && confidence >= 7)) {
+              entry.bestCoord = { lat, lng, confidence };
+            }
+
             if (entry.companies.length < 10) {
               entry.companies.push(name);
               entry.companyCoords.push({ lat, lng });
+            }
+
+            // --- Industry Cluster Tracking ---
+            if (standardizedIndustry) {
+              const industryKey = `${countryKey}|${standardizedIndustry.toLowerCase()}`;
+              if (!this.industryCoords.has(industryKey)) {
+                this.industryCoords.set(industryKey, { lat: 0, lng: 0, count: 0, coords: [] });
+              }
+              const indEntry = this.industryCoords.get(industryKey);
+              indEntry.lat = ((indEntry.lat * indEntry.count) + lat) / (indEntry.count + 1);
+              indEntry.lng = ((indEntry.lng * indEntry.count) + lng) / (indEntry.count + 1);
+              indEntry.count += 1;
+              if (indEntry.coords.length < 5) {
+                indEntry.coords.push({ lat, lng });
+              }
             }
           }
         })
@@ -214,13 +240,18 @@ class CSVGraphService {
     
     if (!company) return null;
 
-    if (company.confidence > 8) {
-      return company; // High confidence -> exact coordinates
-    } else {
-      // Low confidence -> average of top 5 companies in that country
-      const countryGeo = this.countryCoords.get(company.country.toLowerCase());
-      if (countryGeo && countryGeo.companyCoords && countryGeo.companyCoords.length > 0) {
-        const top5 = countryGeo.companyCoords.slice(0, 5);
+    // TIER 1: High confidence -> exact coordinates
+    if (company.confidence >= 7) {
+      return company; 
+    } 
+
+    // TIER 2: Low confidence -> try Industry Cluster Centroid (Top 5 in same country + industry)
+    if (company.standardizedIndustry) {
+      const industryKey = `${company.country.toLowerCase()}|${company.standardizedIndustry.toLowerCase()}`;
+      const indGeo = this.industryCoords.get(industryKey);
+      
+      if (indGeo && indGeo.coords.length > 0) {
+        const top5 = indGeo.coords.slice(0, 5);
         const avgLat = top5.reduce((sum, c) => sum + c.lat, 0) / top5.length;
         const avgLng = top5.reduce((sum, c) => sum + c.lng, 0) / top5.length;
         
@@ -228,11 +259,27 @@ class CSVGraphService {
           ...company,
           lat: avgLat,
           lng: avgLng,
-          wasAveraged: true // Flag to indicate logic was triggered
+          wasClusterAveraged: true // Flag for visibility
         };
       }
-      return company; // Fallback if no country data
     }
+
+    // TIER 3: Fallback to Country Centroid (Top 5 companies in country)
+    const countryGeo = this.countryCoords.get(company.country.toLowerCase());
+    if (countryGeo && countryGeo.companyCoords && countryGeo.companyCoords.length > 0) {
+      const top5 = countryGeo.companyCoords.slice(0, 5);
+      const avgLat = top5.reduce((sum, c) => sum + c.lat, 0) / top5.length;
+      const avgLng = top5.reduce((sum, c) => sum + c.lng, 0) / top5.length;
+      
+      return {
+        ...company,
+        lat: avgLat,
+        lng: avgLng,
+        wasCountryAveraged: true 
+      };
+    }
+
+    return company; // Absolute fallback
   }
 
   /**
@@ -241,7 +288,28 @@ class CSVGraphService {
    */
   getCountryGeo(countryName) {
     if (!countryName) return null;
-    return this.countryCoords.get(countryName.toLowerCase()) || null;
+    const geo = this.countryCoords.get(countryName.toLowerCase());
+    if (!geo) return null;
+
+    // Logic: If we have a high-confidence anchor company (>= 7), use its coordinates.
+    // Otherwise, fall back to the average of all companies in that country.
+    if (geo.bestCoord && geo.bestCoord.confidence >= 7) {
+      return {
+        lat: geo.bestCoord.lat,
+        lng: geo.bestCoord.lng,
+        companies: geo.companies,
+        country: geo.country,
+        isExactCompanyAnchor: true
+      };
+    }
+
+    return {
+      lat: geo.lat,
+      lng: geo.lng,
+      companies: geo.companies,
+      country: geo.country,
+      isExactCompanyAnchor: false
+    };
   }
 
   /**
