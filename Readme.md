@@ -2,7 +2,7 @@
 
 > **Next-generation Enterprise Resource Planning (ERP) and Vendor CRM tool for visualizing, mapping, and analyzing global trade dependencies.**
 
-FlowScope is a high-performance **Supply Chain Intelligence Platform** designed to act as an advanced modular extension for modern ERP and CRM systems. By blending real-time trade volume data, intelligent Bill of Materials (BOM) inference, and a proprietary database of global entities, FlowScope enables enterprises to gain total visibility over their procurement pipelines, vendor networks, and B2B customer relationships.
+FlowScope is a high-performance **Supply Chain Intelligence Platform** designed to act as an advanced modular extension for modern ERP and CRM systems. By blending real-time trade volume data, structured BOM mapping, and a proprietary database of global entities, FlowScope enables enterprises to gain total visibility over their procurement pipelines, vendor networks, and B2B customer relationships.
 
 ---
 
@@ -91,6 +91,22 @@ NEO4J_USER=neo4j
 NEO4J_PASSWORD=your_password
 OPENCAGE_API_KEY=your_opencage_key
 ```
+
+---
+
+## 📐 Algorithmic Foundations
+
+FlowScope leverages foundational graph algorithms to make sense of complex trade flows and optimize procurement mapping:
+
+- **Breadth-First Search (BFS):** Traverses the supply chain network layer-by-layer to determine clear "Tiers":
+  - **Tier 0:** Your search origin (e.g., the primary manufacturer).
+  - **Tier 1:** Direct strategic partners.
+  - **Tier 2:** Secondary upstream suppliers.
+  - **Tier 3+:** Raw material foundations (Ores, Minerals, Fuels).
+
+- **A* (A-Star) Search Algorithm:** Computes the most efficient logistical paths and shortest transit distances between international trade nodes, accounting for geographical heuristics:
+  - **Geospatial Nodes:** Uses precise coordinates (via OpenCage) to represent the exact physical locations of global facilities.
+  - **Heuristic Pathfinding:** Evaluates real-world spherical distances (Haversine approximations) to prioritize the most direct and cost-effective shipping routes across the global supply chain map.
 
 ---
 
