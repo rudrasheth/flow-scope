@@ -105,7 +105,8 @@ FlowScope leverages foundational graph and geospatial algorithms to interpret co
   - **Tier 3+:** Raw material foundations (Ores, Minerals, Fuels).
 - **A* (A-Star) Search Algorithm:** Computes optimal logistical paths between international nodes.
   - **Heuristic-Driven:** Unlike simple distance models, A* utilizes geographical heuristics to navigate the graph efficiently.
-  - **Beyond the Straight Line:** In global trade, the shortest path is rarely a simple straight line. FlowScope accounts for **Haversine (Great Circle) distances** on a spherical Earth, acknowledging that the shortest route between two coordinates is an arc that follows the planet's curvature. By combining this with graph edge weights, A* identifies the most efficient multi-stop vendor routes rather than just point-to-point Euclidean distances.
+  - **Beyond the Straight Line:** In global trade, the shortest path is rarely a simple straight line. FlowScope accounts for **Haversine (Great Circle) distances** on a spherical Earth, acknowledging that the shortest route between two coordinates is an arc that follows the planet's curvature.
+  - **Trade Hub Optimization:** The algorithm evaluates strategic **Global Trade Centers** (e.g., Singapore, Dubai, Rotterdam) as intermediate nodes. By intelligently routing through these hubs, FlowScope identifies paths that leverage established infrastructure and consolidated shipping lanes—optimizing for reduced logistical costs even when the physical distance may be greater. By combining this with graph edge weights, A* identifies the most efficient multi-stop vendor routes rather than just point-to-point Euclidean distances.
 
 ---
 
