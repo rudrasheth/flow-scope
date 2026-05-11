@@ -1,44 +1,50 @@
-# 🌐 FlowScope: Supply Chain Graph Intelligence
+# 🌐 FlowScope: ERP-Integrated Supply Chain & Vendor CRM
 
-> **Visualizing the complexity of global trade through AI-driven graph intelligence.**
+> **Next-generation Enterprise Resource Planning (ERP) and Vendor CRM tool for visualizing, mapping, and analyzing global trade dependencies.**
 
-FlowScope is a high-performance supply chain intelligence platform designed to map, trace, and analyze global trade networks. By merging real-time trade data with AI-powered Bill of Materials (BOM) inference, FlowScope reveals deep-tier dependencies and identifies risks across multi-country logistics networks.
-
----
-
-## ✨ Key Features
-
-- **🗄️ Proprietary 9.5k+ Dataset:** A rich, custom-built dataset of over 9,500 global supply chain entities, meticulously constructed using **Wikipedia** for company context and the **OpenCage Geocoding API** for precise geospatial coordinates.
-- **🏢 Company Directory & Registration:** A seamless interface allowing users to dynamically register new companies into the network and discover existing entities through advanced, filterable search.
-- **📈 Dynamic Trade Routes:** Real-time integration with the **UN Comtrade API** to dynamically map active export and import trade routes and cross-border shipment data on the fly.
-- **🕸️ Dynamic Graph Engine:** Interactive multi-tier graph visualization powered by **Cytoscape.js**, featuring hardware-accelerated nodes and real-time path discovery.
-- **🗺️ Global Map Intelligence:** Interactive trade route mapping using **Leaflet**, visualizing the physical flow of goods across continents.
-- **🔍 Advanced Algorithms:** 
-  - **Breadth-First Search (BFS):** Categorizes supply chain depth (Tier 1-4) automatically to discover direct and indirect dependencies.
-  - **A* (A-Star) Pathfinding:** Optimizes logistics routes and distance tracking between suppliers and buyers across the globe.
+FlowScope is a high-performance **Supply Chain Intelligence Platform** designed to act as an advanced modular extension for modern ERP and CRM systems. By blending real-time trade volume data, intelligent Bill of Materials (BOM) inference, and a proprietary database of global entities, FlowScope enables enterprises to gain total visibility over their procurement pipelines, vendor networks, and B2B customer relationships.
 
 ---
 
-## 🛠️ Technology Stack & Data Sources
+## ✨ Enterprise Modules & Key Features
 
-| Layer | Technologies / Sources |
-| :--- | :--- |
-| **Frontend** | React, Vite, TailwindCSS, Framer Motion, Lucide Icons |
-| **Backend** | Node.js, Express, Axios |
-| **Database** | Neo4j (GraphDB), CSV Fast-Streaming |
-| **Visualization** | Leaflet.js (Map), Cytoscape.js (Graph) |
-| **Algorithms** | BFS, A* Search |
-| **External APIs** | **UN Comtrade** (Trade Data), **Wikipedia** (Company Bios), **OpenCage** (Geocoding) |
+### 🏢 Vendor CRM & Master Data Management
+- **🗄️ Proprietary 9.5k+ Entity Dataset:** A rich, custom-built master database of over 9,500 global supply chain vendors and customers, meticulously constructed using **Wikipedia** for corporate context and the **OpenCage Geocoding API** for precise geospatial coordinates.
+- **💼 Interactive Company Registry:** A seamless CRM interface allowing procurement teams to dynamically onboard, register, and categorize new suppliers or B2B clients, instantly normalizing them into the enterprise network.
+- **📊 Vendor Intelligence Dossiers:** 360-degree views of any registered entity, providing instant access to verified corporate profiles, enriched dynamically with live data.
+
+### 🏭 Advanced ERP & Procurement Intelligence
+- **🛡️ Intelligent BOM (Bill of Materials) Inference:** Automatically predicts and verifies multi-tier product sub-components (e.g., Bauxite → Alumina → Aluminum), enabling profound insight into indirect procurement dependencies.
+- **📈 Live Trade & Volume Analytics:** Real-time integration with the **UN Comtrade API** to dynamically map active export/import trade routes and shipment volumes, empowering data-driven procurement decisions.
+- **🕸️ Dynamic Network Graph:** Interactive multi-tier graph visualization powered by **Cytoscape.js**, rendering complex vendor-to-customer relationships with hardware-accelerated nodes.
+
+### 🚚 Logistics & Routing Optimization
+- **🗺️ Global Map Intelligence:** Interactive trade route mapping using **Leaflet**, visualizing the physical flow of enterprise inventory across continents.
+- **🔍 Advanced Routing Algorithms:** 
+  - **Breadth-First Search (BFS):** Categorizes vendor depth automatically (Tier 1 direct suppliers to Tier 4 raw material sources).
+  - **A* (A-Star) Pathfinding:** Optimizes logistics routes and distance tracking between suppliers and buyers to minimize transit times and procurement delays.
 
 ---
 
 ## 🏗️ Architecture Overview
 
-The system operates on a hybrid **Pre-Computed & Dynamic** model:
-1.  **Rich Custom Dataset:** Our proprietary database of 9,500+ entities is pre-constructed using **Wikipedia** and **OpenCage** to ensure high-speed, sub-millisecond retrieval without API rate-limit bottlenecks.
-2.  **Dynamic Comtrade Engine:** When a node expansion is requested, the system queries the **UN Comtrade API** on the fly to render actual, live export/import trade paths and volume metrics.
-3.  **Interactive Registry:** Users can actively expand the dataset via the registration module, which instantly normalizes and injects new companies into the visualization pipeline.
-4.  **Real-time Aggregation:** The frontend merges our massive database state with live Comtrade routes into a unified graph store, utilizing **A*** algorithms to compute precise logistical distances.
+The system operates on a hybrid **Pre-Computed & Dynamic** architecture built for enterprise scale:
+1.  **Rich Custom Dataset:** Our proprietary CRM database of 9,500+ entities is pre-constructed using **Wikipedia** and **OpenCage** to ensure high-speed, sub-millisecond retrieval without API rate-limit bottlenecks.
+2.  **Dynamic Comtrade Engine:** When a procurement node is expanded, the system queries the **UN Comtrade API** on the fly to render actual, live export/import trade paths.
+3.  **Real-time Aggregation:** The frontend merges the massive ERP database state with live trade routes into a unified graph store, utilizing **A*** algorithms to compute precise logistical distances.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technologies / Sources |
+| :--- | :--- |
+| **Frontend (UI/UX)** | React, Vite, TailwindCSS, Framer Motion, Lucide Icons |
+| **Backend (API)** | Node.js, Express, Axios |
+| **Database** | Neo4j (GraphDB for Relationship Mapping), CSV Fast-Streaming |
+| **Visualization** | Leaflet.js (Geospatial Mapping), Cytoscape.js (Network Graph) |
+| **Algorithms** | BFS (Tiering), A* Search (Routing Optimization) |
+| **Data Integrations**| **UN Comtrade** (Trade Data), **Wikipedia** (Context), **OpenCage** (Geocoding) |
 
 ---
 
@@ -88,16 +94,4 @@ OPENCAGE_API_KEY=your_opencage_key
 
 ---
 
-## 📐 Algorithmic Foundations
-
-FlowScope leverages foundational graph algorithms to make sense of complex trade flows:
-
-- **Breadth-First Search (BFS):** Traverses the supply chain network layer-by-layer to determine clear "Tiers":
-  - **Tier 0:** Your search origin.
-  - **Tier 1:** Direct strategic partners.
-  - **Tier 2:** Secondary upstream suppliers.
-  - **Tier 3+:** Raw material foundations (Ores, Minerals, Fuels).
-- **A* (A-Star) Search Algorithm:** Computes the most efficient logistical paths and shortest transit distances between international trade nodes, accounting for geographical heuristics.
-
-
-*FlowScope is built for precision. Trace the invisible, secure the future.*
+*FlowScope is built for enterprise precision. Trace the invisible, optimize your supply chain, and secure your vendor network.*
