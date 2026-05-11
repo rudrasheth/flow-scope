@@ -5,6 +5,6 @@
     "node": "20.x"
   },
   "scripts": {
-    "vercel-build": "cd client && npm install && npm run build"
+    "vercel-build": "cd client && npm install && npm run build && cd .. && rm -rf dist && cp -R client/dist dist"
   }
 }
