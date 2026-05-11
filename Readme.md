@@ -8,14 +8,14 @@ FlowScope is a high-performance supply chain intelligence platform designed to m
 
 ## ✨ Key Features
 
-- **🛡️ Intelligent BOM Inference:** Automatically predicts and verifies product sub-components (e.g., Bauxite → Alumina → Aluminum).
+- **🗄️ Proprietary 9.5k+ Dataset:** A rich, custom-built dataset of over 9,500 global supply chain entities, meticulously constructed using **Wikipedia** for company context and the **OpenCage Geocoding API** for precise geospatial coordinates.
+- **🏢 Company Directory & Registration:** A seamless interface allowing users to dynamically register new companies into the network and discover existing entities through advanced, filterable search.
+- **📈 Dynamic Trade Routes:** Real-time integration with the **UN Comtrade API** to dynamically map active export and import trade routes and cross-border shipment data on the fly.
 - **🕸️ Dynamic Graph Engine:** Interactive multi-tier graph visualization powered by **Cytoscape.js**, featuring hardware-accelerated nodes and real-time path discovery.
-- **🗺️ Global Map Intelligence:** Real-time trade route mapping using **Leaflet**, visualizing the physical flow of goods across continents with precise coordinates powered by the **OpenCage Geocoding API**.
-- **📊 Intelligence Dossiers:** Instant access to verified company profiles, enriched dynamically with live data from **Wikipedia**.
+- **🗺️ Global Map Intelligence:** Interactive trade route mapping using **Leaflet**, visualizing the physical flow of goods across continents.
 - **🔍 Advanced Algorithms:** 
   - **Breadth-First Search (BFS):** Categorizes supply chain depth (Tier 1-4) automatically to discover direct and indirect dependencies.
   - **A* (A-Star) Pathfinding:** Optimizes logistics routes and distance tracking between suppliers and buyers across the globe.
-- **📈 Global Trade Flow Data:** Integrates with the **UN Comtrade API** to fetch accurate trade volume metrics and cross-border shipment data.
 
 ---
 
@@ -34,11 +34,11 @@ FlowScope is a high-performance supply chain intelligence platform designed to m
 
 ## 🏗️ Architecture Overview
 
-The system operates on a **Discovery-Cache** model:
-1.  **Static Database:** Core company data and HSN taxonomies are stored in Neo4j and high-speed CSV caches.
-2.  **Live Discovery:** When a node expansion is requested, the **Trace Engine** predicts dependencies, fetches volume metrics from the **UN Comtrade API**, and resolves company context via **Wikipedia**.
-3.  **Geospatial Resolution:** Company addresses are passed through **OpenCage** to get precise latitude/longitude for rendering on the Leaflet map.
-4.  **Real-time Aggregation:** The frontend merges database state with live-discovered partners into a unified graph store, utilizing A* algorithms to compute logistical distances.
+The system operates on a hybrid **Pre-Computed & Dynamic** model:
+1.  **Rich Custom Dataset:** Our proprietary database of 9,500+ entities is pre-constructed using **Wikipedia** and **OpenCage** to ensure high-speed, sub-millisecond retrieval without API rate-limit bottlenecks.
+2.  **Dynamic Comtrade Engine:** When a node expansion is requested, the system queries the **UN Comtrade API** on the fly to render actual, live export/import trade paths and volume metrics.
+3.  **Interactive Registry:** Users can actively expand the dataset via the registration module, which instantly normalizes and injects new companies into the visualization pipeline.
+4.  **Real-time Aggregation:** The frontend merges our massive database state with live Comtrade routes into a unified graph store, utilizing **A*** algorithms to compute precise logistical distances.
 
 ---
 
