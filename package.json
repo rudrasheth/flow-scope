@@ -1,8 +1,4 @@
 {
   "name": "flowscope-monorepo",
-  "private": true,
-  "workspaces": [
-    "client",
-    "server"
-  ]
+  "private": true
 }
