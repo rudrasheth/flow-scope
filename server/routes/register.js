@@ -3,6 +3,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const csvService = require('../services/csvService');
+const { getDriver, getIsConnected } = require('../config/neo4j');
 
 // ─── Write Lock (prevents concurrent CSV corruption) ───
 let writeLock = false;
@@ -316,6 +317,41 @@ router.post('/', async (req, res) => {
     });
 
     console.log(`[Register] ✓ New company registered: ${companyName} (${country}, confidence: ${conf})`);
+
+    // ─── NEO4J SYNC ───
+    if (getIsConnected()) {
+      const session = getDriver().session();
+      try {
+        await session.run(
+          `MERGE (c:Company {name: $name})
+           SET c.country = $country,
+               c.city = $city,
+               c.industry = $industry,
+               c.description = $description,
+               c.latitude = $lat,
+               c.longitude = $lng,
+               c.confidence = $conf,
+               c.bomFilter = $bomFilter`,
+          {
+            name: companyName.trim(),
+            country: country.trim(),
+            city: city.trim(),
+            industry: fullIndustry,
+            description: fullDesc,
+            lat,
+            lng,
+            conf,
+            bomFilter: JSON.stringify(bomArray)
+          }
+        );
+        console.log(`[Register] ✓ Successfully synced to Neo4j database`);
+      } catch (neoErr) {
+        console.error(`[Register] ⚠ Neo4j sync failed:`, neoErr.message);
+      } finally {
+        await session.close();
+      }
+    }
+
 
     res.status(201).json({
       success: true,
