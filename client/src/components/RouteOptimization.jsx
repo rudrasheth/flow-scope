@@ -4,6 +4,19 @@ import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// ─── Haversine Formula (Client-side) ───
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
 import { Route, Zap, MapPin, ArrowRight, Loader2, ChevronDown, Navigation, Globe2, Package, Building2 } from 'lucide-react';
 
 // ─── Custom Marker Icons ───
@@ -89,6 +102,23 @@ export default function RouteOptimization({ company, graphData }) {
       setError(null);
     }
   }, [component]);
+
+  
+  // ─── Helper: Create Curved Path (Great Circle Visual) ───
+  const getCurvedPath = (from, to, segments = 40) => {
+    const [lat1, lon1] = from;
+    const [lat2, lon2] = to;
+    const path = [];
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      let lat = lat1 + (lat2 - lat1) * t;
+      let lon = lon1 + (lon2 - lon1) * t;
+      const offset = Math.sin(t * Math.PI) * (haversine(lat1, lon1, lat2, lon2) / 3000) * 8;
+      lat += offset;
+      path.push([lat, lon]);
+    }
+    return path;
+  };
 
   return (
     <div className="h-full flex flex-col bg-[#0a0a0a] text-white overflow-hidden">
@@ -380,7 +410,7 @@ export default function RouteOptimization({ company, graphData }) {
             {result?.routeEdges?.map((edge, i) => (
               <Polyline
                 key={`route-edge-${i}`}
-                positions={[edge.from, edge.to]}
+                positions={getCurvedPath(edge.from, edge.to)}
                 pathOptions={{
                   color: edge.color || '#8B5CF6',
                   weight: edge.isBest ? 5 : 3,

@@ -51,7 +51,7 @@ export default function App() {
   // ─── Socket.io Connection ───
   useEffect(() => {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const backendUrl = import.meta.env.VITE_API_URL || (isLocal ? 'http://localhost:3001' : 'https://flowscope-uaaf.onrender.com');
+    const backendUrl = import.meta.env.VITE_API_URL || (isLocal ? 'http://localhost:3001' : 'https://flow-scope.onrender.com');
     
     axios.defaults.baseURL = backendUrl;
     const socket = io(backendUrl, {
