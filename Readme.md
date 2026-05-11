@@ -14,7 +14,7 @@ FlowScope is a high-performance **Supply Chain Intelligence Platform** designed 
 - **📊 Vendor Intelligence Dossiers:** 360-degree views of any registered entity, providing instant access to verified corporate profiles, enriched dynamically with live data.
 
 ### 🏭 Advanced ERP & Procurement Intelligence
-- **🛡️ Intelligent BOM (Bill of Materials) Inference:** Automatically predicts and verifies multi-tier product sub-components (e.g., Bauxite → Alumina → Aluminum), enabling profound insight into indirect procurement dependencies.
+- **🛡️ Structured BOM (Bill of Materials) Filtering:** Maps multi-tier product dependencies (e.g., Bauxite → Alumina → Aluminum) by systematically categorizing vendors using robust `industry` and `standardized_industry` data filters, allowing for precise drill-down into indirect procurement layers.
 - **📈 Live Trade & Volume Analytics:** Real-time integration with the **UN Comtrade API** to dynamically map active export/import trade routes and shipment volumes, empowering data-driven procurement decisions.
 - **🕸️ Dynamic Network Graph:** Interactive multi-tier graph visualization powered by **Cytoscape.js**, rendering complex vendor-to-customer relationships with hardware-accelerated nodes.
 
