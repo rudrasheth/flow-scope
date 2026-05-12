@@ -85,7 +85,7 @@ export default function RouteOptimization({ company, graphData, onTriggerTrace }
       axios.get(`${backendUrl}/api/companies/${encodeURIComponent(company.name)}/hsn`)
         .then(res => {
           if (res.data && res.data.hsnCodes) {
-            setAvailableComponents(res.data.hsnCodes.map(h => h.code));
+            setAvailableComponents(res.data.hsnCodes);
           } else {
             setAvailableComponents([]);
           }
@@ -244,7 +244,9 @@ export default function RouteOptimization({ company, graphData, onTriggerTrace }
             >
               <option value="">Select BOM Component</option>
               {availableComponents.map(c => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c.code} value={c.code}>
+                  {c.description ? `${c.description} (${c.code})` : c.code}
+                </option>
               ))}
             </select>
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
