@@ -13,7 +13,7 @@ const path = require('path');
 const csv = require('csv-parser');
 const neo4j = require('neo4j-driver');
 
-const CSV_PATH = path.join(__dirname, '..', 'data', 'supply_chain_data.csv');
+const CSV_PATH = path.join(__dirname, 'data', 'supply_chain_data.csv');
 
 async function seed() {
   console.log('\n  ═══ FlowScope Neo4j Seed ═══\n');

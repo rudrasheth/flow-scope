@@ -52,44 +52,81 @@ The system operates on a hybrid **Pre-Computed & Dynamic** architecture built fo
 
 ### Prerequisites
 - Node.js (v18+)
-- Neo4j Instance (Local or AuraDB)
-- API Key for OpenCage
+- Neo4j Instance (Local or [AuraDB Free](https://neo4j.com/cloud/aura-free/)) — *optional, app falls back to CSV mode*
 
 ### Installation
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/rudrasheth/flow-scope.git
-   cd flow-scope
+   git clone https://github.com/Shubh179/FlowScope.git
+   cd FlowScope
    ```
 
 2. **Setup Server:**
    ```bash
    cd server
    npm install
-   # Create a .env file based on the environment section below
+   cp .env.example .env    # Then edit .env with your credentials
    npm run dev
    ```
 
-3. **Setup Client:**
+3. **Setup Client (in a separate terminal):**
    ```bash
-   cd ../client
+   cd client
    npm install
    npm run dev
    ```
+
+4. **Open in browser:**
+   Navigate to `http://localhost:5173`
 
 ---
 
 ## 🔑 Environment Variables
 
-Create a `.env` file in the `server/` directory:
+Copy `server/.env.example` to `server/.env` and fill in your values:
 
 ```env
+# Server
 PORT=3001
+
+# Neo4j Graph Database (optional — app falls back to CSV if unavailable)
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=your_password
-OPENCAGE_API_KEY=your_opencage_key
+NEO4J_PASSWORD=your_password_here
+
+# Data Source: "neo4j" or "csv" (csv requires no external DB)
+DATA_SOURCE=csv
+
+# News API — optional, for live trade news (https://newsdata.io/)
+NEWS_API_KEY=your_newsdata_api_key_here
+
+# Gemini AI — optional, for AI-powered BOM inference (https://aistudio.google.com/)
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+> **Note:** The app works out-of-the-box with `DATA_SOURCE=csv` — no Neo4j or API keys required for the core experience. The 9,500+ company dataset is bundled in the repo.
+
+---
+
+## 🗃️ Seeding Neo4j (Optional)
+
+If you want to use Neo4j for graph-powered queries, seed your database after configuring `.env`:
+
+```bash
+cd server
+
+# Basic trade relationships
+npm run seed
+
+# Full production dataset (9.5k+ companies + HS taxonomy)
+npm run seed:production
+
+# Curated demo supply chains (Tesla, Apple, Boeing, NVIDIA)
+npm run seed:judges
+
+# Or seed everything at once
+npm run seed:all
 ```
 
 ---
