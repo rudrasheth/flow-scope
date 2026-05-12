@@ -53,7 +53,7 @@ export default function HSNSelector({ companyName, onHSNSelect, selectedHSN }) {
       </motion.button>
 
       {/* Individual codes */}
-      <div className="space-y-1.5 mt-2">
+      <div className="space-y-2 mt-2">
         {codes.map((h, i) => (
           <motion.button
             key={h.code}
@@ -63,25 +63,28 @@ export default function HSNSelector({ companyName, onHSNSelect, selectedHSN }) {
             whileHover={{ x: 4 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onHSNSelect(h.code, h.description)}
-            className={`w-full flex flex-col p-3 rounded-xl border transition-all duration-200 group relative overflow-hidden
+            className={`w-full flex flex-col p-3.5 rounded-xl border transition-all duration-200 group relative overflow-hidden
               ${selectedHSN === h.code
                 ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-violet-500 shadow-premium'
                 : 'bg-white text-slate-600 border-slate-100 hover:border-violet-300 shadow-sm'
               }`}
           >
-            <div className="flex items-center justify-between w-full mb-1">
-              <div className="flex items-center gap-2">
-                <Hash size={14} className={selectedHSN === h.code ? 'text-violet-200' : 'text-violet-400'} />
-                <span className="font-black text-sm tracking-tight">{h.code}</span>
+            {/* Product name — primary label, clearly visible */}
+            <div className={`text-[13px] font-black text-left leading-snug uppercase tracking-tight mb-2 ${selectedHSN === h.code ? 'text-white' : 'text-slate-700'}`}>
+              {h.description}
+            </div>
+
+            {/* HS code badge + quantity — secondary info row */}
+            <div className="flex items-center justify-between w-full">
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black tracking-wide ${selectedHSN === h.code ? 'bg-white/15 text-violet-200' : 'bg-violet-50 text-violet-600'}`}>
+                <Hash size={11} className="opacity-70" />
+                <span>HS {h.code}</span>
               </div>
               {h.totalQuantity > 0 && (
-                <span className={`text-xs font-black tabular-nums px-2 py-0.5 rounded-md ${selectedHSN === h.code ? 'bg-white/20' : 'bg-violet-50 text-violet-600'}`}>
-                  {fmt(h.totalQuantity)}
+                <span className={`text-[11px] font-black tabular-nums px-2 py-0.5 rounded-md ${selectedHSN === h.code ? 'bg-white/20 text-violet-100' : 'bg-slate-100 text-slate-500'}`}>
+                  {fmt(h.totalQuantity)} units
                 </span>
               )}
-            </div>
-            <div className={`text-xs font-bold text-left truncate w-full uppercase tracking-tight ${selectedHSN === h.code ? 'text-violet-100' : 'text-slate-500'}`}>
-              {h.description}
             </div>
             
             {selectedHSN === h.code && (

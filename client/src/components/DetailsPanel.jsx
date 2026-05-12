@@ -210,17 +210,20 @@ export default function DetailsPanel({ selectedCompany, selectedNode, graphData 
                     transition={{ delay: i * 0.03 }}
                     className="p-4 bg-white border border-slate-100 rounded-2xl shadow-premium hover:border-blue-200 transition-all duration-300 group"
                   >
-                    <div className="flex items-center justify-between mb-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                          <Activity size={12} />
-                        </div>
-                        <span className="font-black text-[11px] text-slate-700 tracking-tight">ASSET #{h.code}</span>
-                      </div>
-                      <span className="text-[10px] font-black text-slate-400 tabular-nums bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">{fmt(h.totalQuantity)} U</span>
+                    {/* Product name — primary label */}
+                    <div className="text-[12px] font-black text-slate-800 uppercase tracking-tight leading-snug mb-3">
+                      {h.description}
                     </div>
-                    <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-1 mb-3">{h.description}</p>
-                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+
+                    {/* HS code badge + quantity */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <Activity size={11} />
+                        <span className="font-black text-[10px] tracking-wide">HS {h.code}</span>
+                      </div>
+                      <span className="text-[10px] font-black text-slate-400 tabular-nums bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100">{fmt(h.totalQuantity)} units</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mt-3">
                       <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(100, maxVol > 0 ? (h.totalQuantity / maxVol) * 250 : 0)}%` }}

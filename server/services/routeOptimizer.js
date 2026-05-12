@@ -168,6 +168,12 @@ class RouteOptimizer {
 
     steps.push({ step: 1, result: `${companyName} → ${destCountry} [${destLat.toFixed(2)}, ${destLng.toFixed(2)}]` });
 
+    // Resolve destination company's standardized_industry for filtering source-country companies
+    const destIndustry = destGeo?.standardizedIndustry || '';
+    if (destIndustry) {
+      console.log(`[RouteOptimizer] Destination industry: ${destIndustry} — filtering source companies by same industry`);
+    }
+
     // ─── STEP 2: Resolve component → HS code ───
     steps.push({ step: 2, action: 'Resolving HS code for component' });
 
@@ -251,6 +257,12 @@ class RouteOptimizer {
           nodeCompanies = [companyName, ...nodeCompanies];
         } else if (isDestination) {
           nodeCompanies = [companyName, ...nodeCompanies.filter(c => c !== companyName)];
+        } else if (isSource && destIndustry) {
+          // For source (exporter) nodes: filter companies to same standardized_industry as destination
+          const industryMatched = csvService.findCompaniesByCountryAndIndustry(country, destIndustry, companyName);
+          if (industryMatched.length > 0) {
+            nodeCompanies = industryMatched.slice(0, 5).map(c => c.name);
+          }
         }
 
         graph.set(country, { lat, lng, neighbors: new Map() });

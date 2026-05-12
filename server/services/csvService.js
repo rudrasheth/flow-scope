@@ -207,9 +207,9 @@ class CSVGraphService {
               entry.bestCoord = { lat, lng, confidence };
             }
 
-            if (entry.companies.length < 10) {
+            if (entry.companies.length < 50) {
               entry.companies.push(name);
-              entry.companyCoords.push({ lat, lng });
+              entry.companyCoords.push({ lat, lng, confidence });
             }
 
             // --- Industry Cluster Tracking ---
@@ -222,8 +222,8 @@ class CSVGraphService {
               indEntry.lat = ((indEntry.lat * indEntry.count) + lat) / (indEntry.count + 1);
               indEntry.lng = ((indEntry.lng * indEntry.count) + lng) / (indEntry.count + 1);
               indEntry.count += 1;
-              if (indEntry.coords.length < 5) {
-                indEntry.coords.push({ lat, lng });
+              if (indEntry.coords.length < 50) {
+                indEntry.coords.push({ lat, lng, confidence });
               }
             }
           }
@@ -251,13 +251,15 @@ class CSVGraphService {
       return company; 
     } 
 
-    // TIER 2: Low confidence -> try Industry Cluster Centroid (Top 5 in same country + industry)
+    // TIER 2: Low confidence -> try Industry Cluster Centroid (Top 5 highest-confidence in same country + industry)
     if (company.standardizedIndustry) {
       const industryKey = `${company.country.toLowerCase()}|${company.standardizedIndustry.toLowerCase()}`;
       const indGeo = this.industryCoords.get(industryKey);
       
       if (indGeo && indGeo.coords.length > 0) {
-        const top5 = indGeo.coords.slice(0, 5);
+        // Sort by confidence (highest first) and take top 5
+        const sorted = [...indGeo.coords].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+        const top5 = sorted.slice(0, 5);
         const avgLat = top5.reduce((sum, c) => sum + c.lat, 0) / top5.length;
         const avgLng = top5.reduce((sum, c) => sum + c.lng, 0) / top5.length;
         
@@ -265,15 +267,18 @@ class CSVGraphService {
           ...company,
           lat: avgLat,
           lng: avgLng,
-          wasClusterAveraged: true // Flag for visibility
+          wasClusterAveraged: true,
+          centroidConfidences: top5.map(c => c.confidence || 0) // Debug visibility
         };
       }
     }
 
-    // TIER 3: Fallback to Country Centroid (Top 5 companies in country)
+    // TIER 3: Fallback to Country Centroid (Top 5 highest-confidence companies in country)
     const countryGeo = this.countryCoords.get(company.country.toLowerCase());
     if (countryGeo && countryGeo.companyCoords && countryGeo.companyCoords.length > 0) {
-      const top5 = countryGeo.companyCoords.slice(0, 5);
+      // Sort by confidence (highest first) and take top 5
+      const sorted = [...countryGeo.companyCoords].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+      const top5 = sorted.slice(0, 5);
       const avgLat = top5.reduce((sum, c) => sum + c.lat, 0) / top5.length;
       const avgLng = top5.reduce((sum, c) => sum + c.lng, 0) / top5.length;
       
@@ -281,7 +286,8 @@ class CSVGraphService {
         ...company,
         lat: avgLat,
         lng: avgLng,
-        wasCountryAveraged: true 
+        wasCountryAveraged: true,
+        centroidConfidences: top5.map(c => c.confidence || 0)
       };
     }
 
@@ -436,6 +442,36 @@ class CSVGraphService {
    * Find companies by country whose description matches certain keywords.
    * Used by the trace engine for probabilistic matching.
    */
+  /**
+   * Find companies in a country matching the same standardized_industry.
+   * This is the PRIORITY matcher — ensures supply chain stays within the correct industry vertical.
+   * @param {string} country - Target country
+   * @param {string} standardizedIndustry - The standardized_industry to match (e.g., "Engineering & Construction")
+   * @param {string} excludeName - Company name to exclude (the current node)
+   * @returns {Array} Matched companies
+   */
+  findCompaniesByCountryAndIndustry(country, standardizedIndustry, excludeName = '') {
+    if (!country || !standardizedIndustry) return [];
+    const normalized = normalizeCountry(country).toLowerCase();
+    const targetIndustry = standardizedIndustry.toLowerCase();
+    const results = [];
+    for (const entry of this.geoCompanies.values()) {
+      if (entry.country.toLowerCase() === normalized &&
+          entry.name.toLowerCase() !== excludeName.toLowerCase() &&
+          entry.standardizedIndustry &&
+          entry.standardizedIndustry.toLowerCase() === targetIndustry) {
+        results.push({ name: entry.name, country: entry.country, description: entry.description, lat: entry.lat, lng: entry.lng, standardizedIndustry: entry.standardizedIndustry });
+      }
+    }
+    // Sort by confidence (higher confidence first) for better geo accuracy
+    results.sort((a, b) => {
+      const aConf = this.geoCompanies.get(a.name.toLowerCase())?.confidence || 0;
+      const bConf = this.geoCompanies.get(b.name.toLowerCase())?.confidence || 0;
+      return bConf - aConf;
+    });
+    return results;
+  }
+
   findCompaniesByCountryAndProfile(country, keywords = []) {
     const normalized = normalizeCountry(country).toLowerCase();
     const results = [];
@@ -455,6 +491,12 @@ class CSVGraphService {
         }
       }
     }
+    // Sort by confidence (higher confidence first) for better geo accuracy
+    results.sort((a, b) => {
+      const aConf = this.geoCompanies.get(a.name.toLowerCase())?.confidence || 0;
+      const bConf = this.geoCompanies.get(b.name.toLowerCase())?.confidence || 0;
+      return bConf - aConf;
+    });
     return results;
   }
 

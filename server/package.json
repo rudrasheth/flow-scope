@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node seed.js"
+    "seed": "node seed.js",
+    "seed:production": "node seed_production.js",
+    "seed:judges": "node seed_judges.js",
+    "seed:all": "node seed.js && node seed_production.js && node seed_judges.js"
   },
   "dependencies": {
     "@google/genai": "^1.50.1",

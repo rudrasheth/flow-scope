@@ -426,7 +426,9 @@ export default function App() {
                                     {entry.companyName}
                                   </div>
                                   <div className={`text-[9px] font-bold mt-0.5 flex items-center gap-1.5 ${isActive ? 'text-white/60' : 'text-gray-400'}`}>
-                                    <span>HSN {entry.hsn}</span>
+                                    <span className="uppercase truncate max-w-[100px]">{entry.hsnDesc}</span>
+                                    <span>·</span>
+                                    <span>HS {entry.hsn}</span>
                                     <span>·</span>
                                     <span>{timeLabel}</span>
                                   </div>
@@ -502,7 +504,11 @@ export default function App() {
           {/* ─── ROUTE OPTIMIZATION PAGE ─── */}
           {page === 'route' && (
             <div className="absolute inset-0 z-50 pointer-events-auto">
-              <RouteOptimization company={company} graphData={graphData} />
+              <RouteOptimization 
+                company={company} 
+                graphData={graphData} 
+                onTriggerTrace={fetchGraph}
+              />
             </div>
           )}
 

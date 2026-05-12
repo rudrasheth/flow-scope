@@ -4,8 +4,8 @@ const path = require('path');
 const csv = require('csv-parser');
 const neo4j = require('neo4j-driver');
 
-const COMPANIES_CSV = path.join(__dirname, '..', 'data', 'companies_with_bom_filters.csv');
-const HS_CSV = path.join(__dirname, '..', 'data', 'merged_harmonized_sections.csv');
+const COMPANIES_CSV = path.join(__dirname, 'data', 'geo_intel.csv');
+const HS_CSV = path.join(__dirname, 'data', 'merged_harmonized_sections.csv');
 
 async function seedProduction() {
   console.log('\n  ═══ FlowScope Neo4j Production Seed ═══\n');

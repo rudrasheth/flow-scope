@@ -290,18 +290,18 @@ export default function GraphView({ graphData, onNodeClick, onExpandNode, expand
       {/* Enhanced Tooltip */}
       {tooltip && (
         <div className="cy-tooltip min-w-[200px]" style={{ left: tooltip.x + 20, top: tooltip.y - 10 }}>
+          {/* Product name — primary */}
+          <div className="text-[12px] font-black text-slate-800 leading-snug mb-2 uppercase">{tooltip.product || 'Trade Link'}</div>
+          
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-               <div className="p-1 rounded bg-blue-50 text-blue-600">
-                  <Activity size={10} strokeWidth={3} />
-               </div>
-               <span className="font-black text-blue-600 text-xs tabular-nums">{tooltip.hsn}</span>
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-blue-50 text-blue-600">
+               <Activity size={10} strokeWidth={3} />
+               <span className="font-black text-[10px] tracking-wide">HS {tooltip.hsn}</span>
             </div>
-            <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+            <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded tabular-nums">
                {fmt(tooltip.quantity)} units
             </span>
           </div>
-          <div className="text-[11px] font-bold text-slate-700 leading-snug mb-2">{tooltip.product}</div>
           <div className="flex items-center gap-2 pt-2 border-t border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
              <span className="text-slate-600">{tooltip.source.split(' ')[0]}</span>
              <ArrowUpRight size={10} className="text-blue-400" />
