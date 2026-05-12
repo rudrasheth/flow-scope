@@ -242,7 +242,17 @@ class CSVGraphService {
   resolveCompanyGeo(companyName) {
     if (!companyName) return null;
     const key = companyName.toLowerCase();
-    const company = this.geoCompanies.get(key);
+    let company = this.geoCompanies.get(key);
+    
+    // Fallback: Fuzzy name match (if "Tata Motors" -> match "Tata Motors Ltd")
+    if (!company) {
+      for (const [geoKey, geoData] of this.geoCompanies) {
+        if (geoKey.includes(key) || key.includes(geoKey)) {
+          company = geoData;
+          break;
+        }
+      }
+    }
     
     if (!company) return null;
 
@@ -558,14 +568,6 @@ class CSVGraphService {
       entry.totalQuantity += edge.quantity;
     }
     return Array.from(hsnMap.values()).sort((a, b) => b.totalQuantity - a.totalQuantity);
-  }
-
-  /**
-   * Resolve geocoded company data including BOM filters.
-   */
-  resolveCompanyGeo(name) {
-    if (!name) return null;
-    return this.geoCompanies.get(name.toLowerCase()) || null;
   }
 
   getCompanyDetails(companyName) {

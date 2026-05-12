@@ -20,7 +20,7 @@ const routeOptimizer = require('../services/routeOptimizer');
  */
 router.post('/optimize', async (req, res) => {
   try {
-    const { company, component } = req.body;
+    const { company, component, hsCode } = req.body;
 
     if (!company || !component) {
       return res.status(400).json({
@@ -29,9 +29,9 @@ router.post('/optimize', async (req, res) => {
       });
     }
 
-    console.log(`[Route] Optimizing: ${company} + ${component}`);
+    console.log(`[Route] Optimizing: ${company} + ${component} (HS: ${hsCode || 'AUTO'})`);
 
-    const result = await routeOptimizer.optimize(company, component);
+    const result = await routeOptimizer.optimize(company, component, hsCode);
 
     if (result.error) {
       return res.status(404).json(result);

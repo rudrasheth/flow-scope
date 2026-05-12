@@ -66,6 +66,7 @@ const TIER1_MARKER = createRouteMarker('#A78BFA', 18, true); // Matching Tier 1 
 
 export default function RouteOptimization({ company, graphData, onTriggerTrace }) {
   const [component, setComponent] = useState('');
+  const [selectedHsCode, setSelectedHsCode] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -99,97 +100,34 @@ export default function RouteOptimization({ company, graphData, onTriggerTrace }
     }
   }, [company, backendUrl]);
 
-  // ─── CORE LOGIC: Tier 1 Vendor Distance Optimization ───
+  // ─── CORE LOGIC: Dynamic Route Optimization via Backend Pipeline ───
   const handleOptimize = useCallback(async () => {
-    if (!company?.name || !component.trim()) return;
+    if (!company?.name || !selectedHsCode) return;
+
     setLoading(true);
     setError(null);
     setResult(null);
     try {
-      // 1. Identify Tier 0 Node
-      let t0 = graphData?.nodes.find(n => n.tier === 0);
-      
-      // 2. Determine if we need to trigger a fresh trace (Comtrade Expansion)
-      // Check if we have Tier 1 vendors in the current graph
-      let t1Vendors = graphData?.nodes.filter(n => n.tier === 1 && n.type === 'Company') || [];
-      
-      // If no Tier 1s or if the user wants to ensure we have the LATEST data for this component
-      if (t1Vendors.length === 0 || !graphData?.tradeRoutes?.some(r => r.hsn === component || r.hsn === component.substring(0,2))) {
-        if (onTriggerTrace) {
-           await onTriggerTrace(company, component, component);
-           // After await, we should look at the graphData again (it should have been updated in props)
-           // But wait, the prop won't update in this execution context.
-           // We might need to wait for the next render or use the return value if fetchGraph returns data.
-        }
+      // Pass the HSN code explicitly to ensure identical seeding as trace.js
+      const { data } = await axios.post('/api/route/optimize', {
+        company: company.name,
+        component: component,
+        hsCode: selectedHsCode
+      });
+
+      if (data.error) {
+        setError(data.error);
+      } else {
+        setResult(data);
+        setSelectedRoute(0); 
       }
-
-      // Note: Because onTriggerTrace updates the parent state, this component will re-render.
-      // To handle the "Compute" after the trace is done, we can use a separate effect or just check if data is now available.
-      // However, for better UX, I'll allow the user to click again or I'll use a 'shouldAutoCompute' flag.
-
     } catch (err) {
-      setError('Optimization failed. Please ensure the network is traced first.');
+      console.error('[RouteOptimizer] Error:', err);
+      setError(err.response?.data?.error || 'Logistics intelligence failed.');
     } finally {
       setLoading(false);
     }
-  }, [company, component, graphData, onTriggerTrace]);
-
-  // Effect to automatically run optimization once graphData contains the relevant Tier 1s
-  useEffect(() => {
-    if (!loading && component && graphData?.nodes.some(n => n.tier === 1)) {
-      const t0 = graphData.nodes.find(n => n.tier === 0);
-      const t1Vendors = graphData.nodes.filter(n => n.tier === 1 && n.type === 'Company');
-      
-      if (t0 && t1Vendors.length > 0 && !result) {
-        // Auto-run distance calculation if we just finished a trace
-        const vendorRoutes = t1Vendors.map((v, idx) => {
-          const dist = calculateHaversine(v.coords[0], v.coords[1], t0.coords[0], t0.coords[1]);
-          return {
-            source: v.label,
-            destination: t0.label,
-            totalDistance: dist,
-            route: [v.country, t0.country],
-            color: idx % 2 === 0 ? '#10B981' : '#F59E0B',
-            coords: { from: v.coords, to: t0.coords },
-            vId: v.id,
-            isHub: !!MAJOR_HUBS[v.country],
-            hubNote: MAJOR_HUBS[v.country]
-          };
-        }).sort((a, b) => a.totalDistance - b.totalDistance);
-
-        const best = vendorRoutes[0];
-        setResult({
-          bestRoute: best,
-          allRoutes: vendorRoutes,
-          routeNodes: [
-             ...t1Vendors.map(v => ({ 
-               name: v.label, lat: v.coords[0], lng: v.coords[1], 
-               isSource: true, tier: 1, country: v.country,
-               hubNote: MAJOR_HUBS[v.country]
-             })),
-             { name: t0.label, lat: t0.coords[0], lng: t0.coords[1], isDestination: true, tier: 0, country: t0.country }
-          ],
-          routeEdges: vendorRoutes.map((r, i) => ({
-            from: r.coords.from,
-            to: r.coords.to,
-            color: i === 0 ? '#10B981' : '#A78BFA',
-            isBest: i === 0,
-            routeIndex: i
-          })),
-          meta: {
-            company: t0.label,
-            hsCode: component,
-            sourceCountries: Array.from(new Set(t1Vendors.map(v => v.country)))
-          },
-          steps: [
-            { step: 1, action: `Live Trace Complete: Identified ${t1Vendors.length} Tier 1 partners` },
-            { step: 2, action: `Distance assessment calculated for all vendors` },
-            { step: 3, action: `Shortest lead path verified through Trade Hub Intelligence` }
-          ]
-        });
-      }
-    }
-  }, [graphData, component, loading, result]);
+  }, [company, component, selectedHsCode]);
 
   useEffect(() => {
     if (!component.trim()) {
@@ -237,16 +175,19 @@ export default function RouteOptimization({ company, graphData, onTriggerTrace }
           <div className="relative flex-1 max-w-[300px]">
             <select
               value={component}
-              onChange={(e) => setComponent(e.target.value)}
+              onChange={(e) => {
+                const desc = e.target.value;
+                setComponent(desc);
+                const found = availableComponents.find(c => c.description === desc);
+                setSelectedHsCode(found ? found.code : '');
+              }}
               className="w-full appearance-none px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-black text-white uppercase tracking-wider
                 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/30 cursor-pointer
                 hover:border-slate-600 transition-all"
             >
               <option value="">Select BOM Component</option>
               {availableComponents.map(c => (
-                <option key={c.code} value={c.code}>
-                  {c.description ? `${c.description} (${c.code})` : c.code}
-                </option>
+                <option key={c.code} value={c.description}>{c.description} (HS {c.code})</option>
               ))}
             </select>
             <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

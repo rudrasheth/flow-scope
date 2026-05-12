@@ -153,9 +153,21 @@ router.post('/expand', async (req, res) => {
 
     // Resolve root company's standardized_industry for industry-aware matching
     const rootGeoData = csvService.resolveCompanyGeo(companyName);
-    const rootIndustry = rootGeoData?.standardizedIndustry || '';
+    let rootIndustry = rootGeoData?.standardizedIndustry || rootGeoData?.industry || '';
+    
+    // Fallback: Infer industry from description if missing
+    if (!rootIndustry) {
+      const desc = (rootGeoData?.description || csvService.getCompanyDescription(companyName) || '').toLowerCase();
+      if (desc.includes('automotive') || desc.includes('vehicle') || desc.includes(' car ')) rootIndustry = 'Automotive Industry';
+      else if (desc.includes('bank') || desc.includes('finance') || desc.includes('financial')) rootIndustry = 'Banking & Financial Services';
+      else if (desc.includes('steel') || desc.includes('metal')) rootIndustry = 'Metal & Mining';
+      else if (desc.includes('tech') || desc.includes('software') || desc.includes('electronic')) rootIndustry = 'Technology & Electronics';
+    }
+
     if (rootIndustry) {
-      console.log(`[TRACE] Root industry: ${rootIndustry} — will prioritize same-industry suppliers`);
+      console.log(`[TRACE] Root industry resolved: "${rootIndustry}" — will prioritize same-industry suppliers`);
+    } else {
+      console.warn(`[TRACE] Could not resolve industry for "${companyName}". BFS may skip nodes due to strict filtering.`);
     }
 
     // Queue for BFS traversal
@@ -284,129 +296,107 @@ router.post('/expand', async (req, res) => {
 
       for (const partner of partnerCountries.slice(0, 3)) {
         const partnerCountry = partner.country;
-        const locNodeId = `loc_${partnerCountry.replace(/[^a-zA-Z0-9]/g, '')}`;
-        
-        const countryGeo = csvService.getCountryGeo(partnerCountry);
-        let locLat = 20, locLng = 77;
-        if (countryGeo) {
-          locLat = countryGeo.lat;
-          locLng = countryGeo.lng;
-        } else {
-          locLat = COUNTRY_COORDS[partnerCountry]?.[0] || 20;
-          locLng = COUNTRY_COORDS[partnerCountry]?.[1] || 77;
-        }
 
-        if (!allNodes.has(locNodeId)) {
-          const locNode = {
-            id: locNodeId, type: 'Location', label: partnerCountry,
-            coords: [locLat, locLng]
-          };
-          allNodes.set(locNodeId, locNode);
-          emitUpdate('node', locNode);
-        }
-        
-        const impEdge = {
-          from: compNodeId, to: locNodeId, relation: 'IMPORTED_FROM', tradeValue: partner.tradeValue
-        };
-        allEdges.push({ ...impEdge, source: impEdge.from, target: impEdge.to, type: impEdge.relation });
-        emitUpdate('edge', impEdge);
+        // ─── TIER CAPS: Respect 3-6 T1 nodes and 7-10 T2 nodes ───
+        const currentT1Count = Array.from(allNodes.values()).filter(n => n.type === 'Company' && n.tier === 1).length;
+        const currentT2Count = Array.from(allNodes.values()).filter(n => n.type === 'Company' && n.tier === 2).length;
 
+        if (current.tier === 0 && currentT1Count >= 6) break; // Cap T1 at 6
+        if (current.tier === 1 && currentT2Count >= 10) break; // Cap T2 at 10
+
+        // ─── STEP 3a: Resolve supplier entities FIRST — skip country if no same-industry match ───
         let matchedCompanies = [];
+        const currentIndustry = current.standardizedIndustry || rootIndustry;
+
+        // Variety: Use HS code as a seed to pick different companies for different BOM filters
+        const hsSeed = parseInt(String(targetHsCode).substring(0, 4)) || 0;
 
         try {
           if (getIsConnected()) {
             const session = getDriver().session();
             try {
-              let keywordClauses = '';
-              if (Array.isArray(keywords) && keywords.length > 0) {
-                keywordClauses = 'AND (' + keywords.slice(0, 3).map((_, i) => `toLower(s.description) CONTAINS $kw${i}`).join(' OR ') + ')';
-              }
-              const params = { partnerCountry, currentName: current.name };
-              if (Array.isArray(keywords)) keywords.slice(0, 3).forEach((kw, i) => { params[`kw${i}`] = kw.toLowerCase(); });
+              if (currentIndustry) {
+                const limitPerCountry = Math.floor(current.tier === 0 ? 2 : 1); 
+                // Skip based on HS seed to get variety
+                const skip = Math.floor((hsSeed % 3) * limitPerCountry);
 
-              const result = await session.run(`
-                MATCH (s:Company)
-                WHERE toLower(s.country) = toLower($partnerCountry) AND s.name <> $currentName AND s.description IS NOT NULL ${keywordClauses}
-                RETURN s.name AS name, s.country AS country, s.description AS desc ORDER BY size(s.description) DESC LIMIT 2
-              `, params);
-              matchedCompanies = result.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '' }));
-              
-              if (matchedCompanies.length === 0) {
-                const fbResult = await session.run(`
-                  MATCH (s:Company) WHERE toLower(s.country) = toLower($partnerCountry) AND s.name <> $currentName AND s.description IS NOT NULL AND size(s.description) > 5
-                  RETURN s.name AS name, s.country AS country, s.description AS desc LIMIT 1
-                `, { partnerCountry, currentName: current.name });
-                matchedCompanies = fbResult.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '' }));
+                const result = await session.run(`
+                  MATCH (s:Company)
+                  WHERE toLower(s.country) = toLower($partnerCountry)
+                    AND s.name <> $currentName
+                    AND s.description IS NOT NULL
+                    AND toLower(s.standardized_industry) = toLower($targetIndustry)
+                  RETURN s.name AS name, s.country AS country, s.description AS desc, s.confidence AS confidence
+                  ORDER BY s.confidence DESC, size(s.description) DESC 
+                  SKIP toInteger($skip) LIMIT toInteger($limit)
+                `, { partnerCountry, currentName: current.name, targetIndustry: currentIndustry, limit: limitPerCountry, skip });
+                matchedCompanies = result.records.map(r => ({ name: r.get('name'), country: r.get('country') || partnerCountry, description: r.get('desc') || '', confidence: r.get('confidence') || 5 }));
               }
             } finally { await session.close(); }
           } else {
-            // CSV Fallback — Industry-aware matching hierarchy:
-            // 1. PRIORITY: Same standardized_industry in partner country
-            const currentIndustry = current.standardizedIndustry || rootIndustry;
+            // CSV Path — STRICT: Only same standardized_industry (sorted by confidence)
             if (currentIndustry) {
               const industryCandidates = csvService.findCompaniesByCountryAndIndustry(partnerCountry, currentIndustry, current.name);
               if (industryCandidates.length > 0) {
-                matchedCompanies = industryCandidates.slice(0, 2).map(c => ({ name: c.name, country: c.country, description: c.description }));
+                const limit = current.tier === 0 ? 2 : 1;
+                // Variety: offset based on HS code
+                const offset = (hsSeed % Math.max(1, Math.floor(industryCandidates.length / limit))) * limit;
+                matchedCompanies = industryCandidates.slice(offset, offset + limit).map(c => ({ name: c.name, country: c.country, description: c.description, lat: c.lat, lng: c.lng, confidence: c.confidence }));
+                
+                // Fallback to start of list if slice returned nothing
+                if (matchedCompanies.length === 0) {
+                  matchedCompanies = industryCandidates.slice(0, limit).map(c => ({ name: c.name, country: c.country, description: c.description, lat: c.lat, lng: c.lng, confidence: c.confidence }));
+                }
               }
-            }
-
-            // 2. FALLBACK: HS-keyword profile matching
-            if (matchedCompanies.length === 0) {
-              const csvCandidates = csvService.findCompaniesByCountryAndProfile(partnerCountry, keywords);
-              matchedCompanies = csvCandidates.filter(c => c.name !== current.name).slice(0, 2).map(c => ({ name: c.name, country: c.country, description: c.description }));
-            }
-
-            // 3. LAST RESORT: Any company in the country BUT still exclude unrelated industries
-            if (matchedCompanies.length === 0) {
-              const EXCLUDED_INDUSTRIES = ['finance', 'banking', 'insurance', 'real estate', 'financial services', 'investment'];
-              const anyRelevant = Array.from(csvService.geoCompanies.values())
-                .filter(c => {
-                  if (!c.country || c.country.toLowerCase() !== String(partnerCountry).toLowerCase()) return false;
-                  if (c.name.toLowerCase() === current.name.toLowerCase()) return false;
-                  const ind = (c.standardizedIndustry || '').toLowerCase();
-                  if (EXCLUDED_INDUSTRIES.some(ex => ind.includes(ex)) && currentIndustry && !currentIndustry.toLowerCase().includes('financ')) return false;
-                  return true;
-                })
-                .slice(0, 1);
-              matchedCompanies = anyRelevant.map(c => ({ name: c.name, country: c.country, description: c.description || '' }));
             }
           }
         } catch (err) {
           console.error(`[TRACE] Entity resolution error for ${partnerCountry}:`, err.message);
         }
 
+        // ─── GATE: No same-industry company in this country? SKIP it entirely ───
         if (matchedCompanies.length === 0) {
-          matchedCompanies.push({
-            name: `National ${hsLabel} Export Co. (${partnerCountry})`,
-            country: partnerCountry,
-            description: `Synthetic supplier generated for ${partnerCountry} to visualize the trade route.`
-          });
+          console.log(`[TRACE] Skipping ${partnerCountry} — no companies match industry "${currentIndustry}"`);
+          continue;
         }
 
-        // ─── STEP 4: Add Supplier Nodes & Trace Edges (same product at every tier) ───
+        // ─── STEP 3b: Country qualifies — now add Location node & import edge ───
+        const locNodeId = `loc_${partnerCountry.replace(/[^a-zA-Z0-9]/g, '')}`;
+        const countryGeo = csvService.getCountryGeo(partnerCountry);
+        let locLat = countryGeo?.lat || COUNTRY_COORDS[partnerCountry]?.[0] || 20;
+        let locLng = countryGeo?.lng || COUNTRY_COORDS[partnerCountry]?.[1] || 77;
+
+        if (!allNodes.has(locNodeId)) {
+          const locNode = { id: locNodeId, type: 'Location', label: partnerCountry, coords: [locLat, locLng] };
+          allNodes.set(locNodeId, locNode);
+          emitUpdate('node', locNode);
+        }
+        
+        const impEdge = { from: compNodeId, to: locNodeId, relation: 'IMPORTED_FROM', tradeValue: partner.tradeValue };
+        allEdges.push({ ...impEdge, source: impEdge.from, target: impEdge.to, type: impEdge.relation });
+        emitUpdate('edge', impEdge);
+
+        // ─── STEP 4: Add Supplier Nodes & Trace Edges ───
         for (const matched of matchedCompanies) {
           const supplierId = `c_${matched.name}`;
+          
+          // Re-check caps inside the loop to be precise
+          const t1Count = Array.from(allNodes.values()).filter(n => n.type === 'Company' && n.tier === 1).length;
+          const t2Count = Array.from(allNodes.values()).filter(n => n.type === 'Company' && n.tier === 2).length;
+          if (current.tier === 0 && t1Count >= 6) break;
+          if (current.tier === 1 && t2Count >= 10) break;
+
           const dossier = csvService.resolveCompanyGeo(matched.name);
           const supDesc = dossier?.description || csvService.getCompanyDescription(matched.name) || matched.description || 'Supply chain partner.';
           const supCity = dossier?.city || null;
           
-          let supLat = 20, supLng = 77;
-          if (matched.lat && matched.lng) {
-            supLat = matched.lat;
-            supLng = matched.lng;
-          } else if (dossier) {
-            supLat = dossier.lat;
-            supLng = dossier.lng;
-          } else {
-            const coords = getCoords(matched.country || partnerCountry, supCity);
-            supLat = coords[0];
-            supLng = coords[1];
-          }
+          let supLat = matched.lat || dossier?.lat || getCoords(matched.country || partnerCountry, supCity)[0];
+          let supLng = matched.lng || dossier?.lng || getCoords(matched.country || partnerCountry, supCity)[1];
 
           if (!allNodes.has(supplierId)) {
             const supNode = {
               id: supplierId, type: 'Company', label: matched.name, country: matched.country || partnerCountry, city: supCity,
-              tier: current.tier + 1, coords: [supLat, supLng], description: supDesc
+              tier: current.tier + 1, coords: [supLat, supLng], description: supDesc, confidence: matched.confidence || 5
             };
             allNodes.set(supplierId, supNode);
             emitUpdate('node', supNode);
@@ -416,7 +406,6 @@ router.post('/expand', async (req, res) => {
           allEdges.push({ ...supEdge, source: supEdge.from, target: supEdge.to, type: supEdge.relation });
           emitUpdate('edge', supEdge);
 
-          // Direct supply edge — SAME HS code and component at every tier
           const directEdge = { source: supplierId, target: `c_${current.name}`, type: 'SUPPLIES_DIRECT', component: componentName, hsn: validHs, tradeValue: partner.tradeValue };
           allEdges.push(directEdge);
 
@@ -424,12 +413,128 @@ router.post('/expand', async (req, res) => {
             visitedCompanies.add(matched.name);
             const matchedGeo = csvService.resolveCompanyGeo(matched.name);
             const matchedIndustry = matchedGeo?.standardizedIndustry || current.standardizedIndustry || rootIndustry;
-            // Queue with the SAME targetHsCode — no branching
             queue.push({ name: matched.name, country: matched.country || partnerCountry, hs: targetHsCode, tier: current.tier + 1, description: supDesc, standardizedIndustry: matchedIndustry });
           }
         }
       }
     }
+
+    // ─── DATASET FALLBACK: If ALL trade links failed, mine the dataset directly ───
+    const supplierNodes = Array.from(allNodes.values()).filter(n => n.type === 'Company' && n.tier > 0);
+    
+    if (supplierNodes.length === 0 && rootIndustry) {
+      console.log(`[TRACE] All trade links exhausted. Falling back to dataset for industry "${rootIndustry}"...`);
+      emitStatus(`No trade matches found. Searching dataset for ${rootIndustry} companies...`);
+
+      // Search entire dataset: same standardized_industry, sorted by confidence (highest first)
+      const allCandidates = Array.from(csvService.geoCompanies.values())
+        .filter(c => {
+          const industryMatch = (c.standardizedIndustry || '').toLowerCase() === rootIndustry.toLowerCase();
+          const notSelf = c.name.toLowerCase() !== companyName.toLowerCase();
+          return industryMatch && notSelf;
+        })
+        .sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+
+      if (allCandidates.length > 0) {
+        // Variety: Use HS code as a seed
+        const hsSeed = parseInt(String(targetHsCode).substring(0, 4)) || 0;
+
+        // Tier 1: 3-6 nodes
+        const t1Count = Math.min(6, Math.max(3, allCandidates.length));
+        const t1Offset = (hsSeed % Math.max(1, allCandidates.length - t1Count));
+        const t1Candidates = allCandidates.slice(t1Offset, t1Offset + t1Count);
+        
+        // Tier 2: Rest of candidates
+        const remaining = allCandidates.filter(c => !t1Candidates.some(t => t.name === c.name));
+        
+        // Setup component node
+        const validHs = typeof csvService.getMostGranularValidHs === 'function' 
+          ? csvService.getMostGranularValidHs(targetHsCode)
+          : String(targetHsCode || '85').substring(0, 2);
+        const hsLabel = getHsLabel(validHs);
+        const componentName = hsnDescription || hsLabel || `HS ${validHs}`;
+        const compNodeId = `comp_${validHs}_${componentName.replace(/[^a-zA-Z0-9]/g, '')}`;
+        
+        if (!allNodes.has(compNodeId)) {
+          const compNode = { id: compNodeId, type: 'Component', label: componentName, hsCode: validHs, tier: 1, coords: null };
+          allNodes.set(compNodeId, compNode);
+          emitUpdate('node', compNode);
+          const reqEdge = { from: rootId, to: compNodeId, relation: 'REQUIRES', provenance: 'dataset' };
+          allEdges.push({ ...reqEdge, source: reqEdge.from, target: reqEdge.to, type: reqEdge.relation });
+          emitUpdate('edge', reqEdge);
+        }
+
+        // Add Tier 1 Nodes
+        for (const t1 of t1Candidates) {
+          const supplierId = `c_${t1.name}`;
+          
+          // Country node
+          const locNodeId = `loc_${t1.country.replace(/[^a-zA-Z0-9]/g, '')}`;
+          if (!allNodes.has(locNodeId)) {
+            const countryGeo = csvService.getCountryGeo(t1.country);
+            const locLat = countryGeo?.lat || COUNTRY_COORDS[t1.country]?.[0] || 20;
+            const locLng = countryGeo?.lng || COUNTRY_COORDS[t1.country]?.[1] || 77;
+            const locNode = { id: locNodeId, type: 'Location', label: t1.country, coords: [locLat, locLng] };
+            allNodes.set(locNodeId, locNode);
+            emitUpdate('node', locNode);
+            
+            const impEdge = { from: compNodeId, to: locNodeId, relation: 'IMPORTED_FROM', tradeValue: 0 };
+            allEdges.push({ ...impEdge, source: impEdge.from, target: impEdge.to, type: impEdge.relation });
+            emitUpdate('edge', impEdge);
+          }
+
+          // Company node
+          const supNode = {
+            id: supplierId, type: 'Company', label: t1.name, country: t1.country,
+            city: t1.city || null, tier: 1,
+            coords: [t1.lat, t1.lng],
+            description: t1.description || 'Tier 1 industry partner.',
+            source: 'dataset-fallback', confidence: t1.confidence
+          };
+          allNodes.set(supplierId, supNode);
+          emitUpdate('node', supNode);
+
+          // Edges
+          const supEdge = { from: locNodeId, to: supplierId, relation: 'SUPPLIED_BY' };
+          allEdges.push({ ...supEdge, source: supEdge.from, target: supEdge.to, type: supEdge.relation });
+          emitUpdate('edge', supEdge);
+
+          const directEdge = { source: supplierId, target: rootId, type: 'SUPPLIES_DIRECT', component: componentName, hsn: validHs, tradeValue: 0 };
+          allEdges.push(directEdge);
+        }
+
+        // Tier 2: 7-10 nodes
+        if (remaining.length > 0) {
+          const t2CountTarget = Math.min(10, Math.max(7, remaining.length));
+          const t2Offset = (hsSeed % Math.max(1, remaining.length - t2CountTarget));
+          const t2Candidates = remaining.slice(t2Offset, t2Offset + t2CountTarget);
+          
+          // Distribute Tier 2 nodes among Tier 1 nodes
+          t2Candidates.forEach((t2, index) => {
+            const parentT1 = t1Candidates[index % t1Candidates.length];
+            const supplierId = `c_${t2.name}`;
+            
+            if (allNodes.has(supplierId)) return;
+
+            // Tier 2 nodes connect to their Tier 1 "customer"
+            const t2Node = {
+              id: supplierId, type: 'Company', label: t2.name, country: t2.country,
+              city: t2.city || null, tier: 2,
+              coords: [t2.lat, t2.lng],
+              description: t2.description || 'Tier 2 industry partner.',
+              source: 'dataset-fallback', confidence: t2.confidence
+            };
+            allNodes.set(supplierId, t2Node);
+            emitUpdate('node', t2Node);
+
+            const t2Edge = { source: supplierId, target: `c_${parentT1.name}`, type: 'SUPPLIES_DIRECT', component: 'Sub-components', hsn: validHs, tradeValue: 0 };
+            allEdges.push(t2Edge);
+          });
+          console.log(`[TRACE] Dataset fallback: Plotting ${t1Candidates.length} T1 and ${t2Candidates.length} T2 nodes for "${rootIndustry}"`);
+        }
+      }
+    }
+
     emitStatus('Expansion complete.');
 
     const tradeRoutes = allEdges.filter(e => e.type === 'SUPPLIES_DIRECT' || e.type === 'UPSTREAM_IMPORT' || e.type === 'IMPORT').map(e => {
