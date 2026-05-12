@@ -76,7 +76,7 @@ export default function RouteOptimization({ company, graphData, onTriggerTrace }
   const backendUrl = import.meta.env.VITE_API_URL || (
     window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? `${window.location.protocol}//${window.location.hostname}:3001`
-      : 'https://flow-scope.onrender.com'
+      : 'https://flowscope-uaaf.onrender.com'
   );
 
   // Fetch company specific BOM components
